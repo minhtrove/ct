@@ -1,0 +1,52 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build artifacts
+/tmp/
+/bin/
+*.log
+tmp/
+
+# Air hot-reload
+tmp/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# Templ generated files
+*_templ.go
+templ-components.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node modules / pnpm
+node_modules/
+.pnpm-store/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Generated CSS (regenerated from input.css)
+# static/output.css
+
+# Third-party JavaScript libraries (downloaded separately)
+static/htmx.min.js
+static/alpine.min.js

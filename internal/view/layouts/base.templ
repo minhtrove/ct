@@ -1,0 +1,16 @@
+package layouts
+
+templ Base(title string, c templ.Component) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>{ title }</title>
+			<link rel="stylesheet" href="/static/output.css"/>
+			<script src="/static/htmx.min.js" defer></script>
+			<script src="/static/alpine.min.js" defer></script>
+		</head>
+		<body>
+			@c
+		</body>
+	</html>
+}
