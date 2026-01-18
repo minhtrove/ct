@@ -1,11 +1,11 @@
-// Package handler defines HTTP handlers for the web application.
-package handler
+// Package page defines HTTP handlers for the web application.
+package page
 
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/minhtranin/ct/internal/render"
+	view "github.com/minhtranin/ct/internal/view/components"
 	"github.com/minhtranin/ct/internal/view/layouts"
-	view "github.com/minhtranin/ct/internal/view/pages"
 )
 
 func Home(f *fiber.Ctx) error {

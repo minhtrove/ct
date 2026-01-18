@@ -9,8 +9,8 @@ import (
 	fiberLog "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
 	"github.com/minhtranin/ct/internal/db"
-	"github.com/minhtranin/ct/internal/handler"
 	"github.com/minhtranin/ct/internal/logger"
+	"github.com/minhtranin/ct/internal/router"
 )
 
 func main() {
@@ -33,9 +33,8 @@ func main() {
 		},
 	))
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return handler.Home(c)
-	})
+	// Register routes
+	router.Register(app)
 
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")

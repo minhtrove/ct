@@ -1,0 +1,7 @@
+{
+  "componentsDir": "internal/view/shared/",
+  "utilsDir": "internal/view/utils",
+  "moduleName": "github.com/minhtranin/ct",
+  "jsDir": "static/",
+  "jsPublicPath": "static/"
+}
