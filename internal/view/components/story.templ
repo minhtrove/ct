@@ -1,92 +1,548 @@
 package view
 
-import button "github.com/minhtranin/ct/internal/view/shared/button"
-import "github.com/minhtranin/ct/internal/view/shared/checkbox"
-import "github.com/minhtranin/ct/internal/view/shared/card"
-import "github.com/minhtranin/ct/internal/view/shared/label"
+import (
+	"github.com/minhtranin/ct/internal/view/shared/button"
+	"github.com/minhtranin/ct/internal/view/shared/input"
+	"github.com/minhtranin/ct/internal/view/shared/datepicker"
+	"github.com/minhtranin/ct/internal/view/shared/dialog"
+	"github.com/minhtranin/ct/internal/view/shared/pagination"
+	"github.com/minhtranin/ct/internal/view/shared/table"
+	"github.com/minhtranin/ct/internal/view/shared/radio"
+	"github.com/minhtranin/ct/internal/view/shared/label"
+	"github.com/minhtranin/ct/internal/view/shared/checkbox"
+	"github.com/minhtranin/ct/internal/view/shared/chart"
+	"github.com/minhtranin/ct/internal/view/shared/card"
+)
 
+templ StoryPage() {
+	<div class="p-8">
+		<h1 class="text-3xl font-bold text-gray-900 mb-2">Stories</h1>
+		<p class="text-gray-600 mb-8">Write and share your stories with the world.</p>
 
-templ StoryPage(title string) {
-<div class="text-yellow-500 p-5 mt-5">
-  <hr />
-  @button.Button() {
-  Button
-  }
-</div>
+		<div class="max-w-6xl">
+			<!-- Create Story Form -->
+			<div class="mb-12 p-6 bg-white border border-gray-200 rounded-lg">
+				<h2 class="text-xl font-semibold text-gray-900 mb-4">Create New Story</h2>
+				<form hx-post="/api/story/create" hx-target="#form-message" class="space-y-6">
+					<div id="form-message"></div>
 
-<div class="flex flex-col gap-6">
-		<!-- Basic checkbox with label -->
-		<div class="flex items-center gap-3">
-			@checkbox.Checkbox(checkbox.Props{
-				ID:    "terms",
-				Name:  "agreements",
-				Value: "terms",
-			})
-			@label.Label(label.Props{
-				For: "terms",
-			}) {
-				Accept terms and conditions
-			}
-		</div>
-		<!-- Checkbox with description -->
-		<div class="flex items-start gap-3">
-			@checkbox.Checkbox(checkbox.Props{
-				ID:      "newsletter",
-				Name:    "agreements",
-				Value:   "newsletter",
-				Checked: true,
-			})
-			<div class="grid gap-2">
-				@label.Label(label.Props{
-					For: "newsletter",
-				}) {
-					Subscribe to newsletter
-				}
-				<p class="text-muted-foreground text-sm">
-					Get notified about new features and updates.
-				</p>
-			</div>
-		</div>
-		<!-- Disabled checkbox -->
-		<div class="flex items-center gap-3">
-			@checkbox.Checkbox(checkbox.Props{
-				ID:       "cookies",
-				Name:     "agreements",
-				Value:    "cookies",
-				Disabled: true,
-			})
-			@label.Label(label.Props{
-				For: "cookies",
-			}) {
-				Use essential cookies only
-			}
-		</div>
-		<!-- Checkbox in a card container -->
-		@label.Label(label.Props{
-			For:   "premium",
-			Class: "block cursor-pointer",
-		}) {
-			@card.Card(card.Props{
-				Class: "hover:border-primary/50 has-[:checked]:ring-1 has-[:checked]:ring-primary has-[:checked]:border-primary transition-all",
-			}) {
-				@card.Content(card.ContentProps{
-					Class: "p-3 flex items-start gap-3",
-				}) {
-					@checkbox.Checkbox(checkbox.Props{
-						ID:    "premium",
-						Name:  "agreements",
-						Value: "premium",
-					})
-					<div class="grid gap-1.5">
-						<p class="text-sm leading-none font-medium">
-							Enable premium features
-						</p>
-						<p class="text-muted-foreground text-sm">
-							Unlock advanced functionality and priority support.
+					<div class="space-y-2">
+						<label for="title" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+							Title
+						</label>
+						@input.Input(input.Props{
+							ID:          "title",
+							Name:        "title",
+							Type:        input.TypeText,
+							Placeholder: "Enter your story title",
+						})
+						<p class="text-sm text-muted-foreground">
+							Choose a descriptive title for your story.
 						</p>
 					</div>
+
+					<div class="space-y-2">
+						<label for="content" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+							Content
+						</label>
+						<textarea
+							id="content"
+							name="content"
+							rows="10"
+							placeholder="Write your story content here..."
+							class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+							required
+						></textarea>
+						<p class="text-sm text-muted-foreground">
+							Write the main content of your story. Be creative!
+						</p>
+					</div>
+
+					<div class="space-y-2">
+						<label for="tags" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+							Tags
+						</label>
+						@input.Input(input.Props{
+							ID:          "tags",
+							Name:        "tags",
+							Type:        input.TypeText,
+							Placeholder: "fiction, adventure, sci-fi (comma separated)",
+						})
+						<p class="text-sm text-muted-foreground">
+							Add tags to help others discover your story.
+						</p>
+					</div>
+
+					<div class="space-y-3">
+						<label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+							Visibility
+						</label>
+						<div class="flex flex-col gap-3">
+							<div class="flex items-start gap-3">
+								@radio.Radio(radio.Props{
+									ID:      "visibility-public",
+									Name:    "visibility",
+									Value:   "public",
+									Checked: true,
+								})
+								<div class="grid gap-1">
+									@label.Label(label.Props{
+										For: "visibility-public",
+									}) {
+										Public
+									}
+									<p class="text-muted-foreground text-sm">
+										Anyone can view your story
+									</p>
+								</div>
+							</div>
+							<div class="flex items-start gap-3">
+								@radio.Radio(radio.Props{
+									ID:    "visibility-private",
+									Name:  "visibility",
+									Value: "private",
+								})
+								<div class="grid gap-1">
+									@label.Label(label.Props{
+										For: "visibility-private",
+									}) {
+										Private
+									}
+									<p class="text-muted-foreground text-sm">
+										Only you can view your story
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="space-y-3">
+						<label class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+							Story Settings
+						</label>
+						<div class="flex flex-col gap-3">
+							<div class="flex items-start gap-3">
+								@checkbox.Checkbox(checkbox.Props{
+									ID:      "allow-comments",
+									Name:    "settings",
+									Value:   "comments",
+									Checked: true,
+								})
+								<div class="grid gap-1">
+									@label.Label(label.Props{
+										For: "allow-comments",
+									}) {
+										Allow comments
+									}
+									<p class="text-muted-foreground text-sm">
+										Let readers leave comments on your story
+									</p>
+								</div>
+							</div>
+							<div class="flex items-start gap-3">
+								@checkbox.Checkbox(checkbox.Props{
+									ID:      "enable-ratings",
+									Name:    "settings",
+									Value:   "ratings",
+									Checked: true,
+								})
+								<div class="grid gap-1">
+									@label.Label(label.Props{
+										For: "enable-ratings",
+									}) {
+										Enable ratings
+									}
+									<p class="text-muted-foreground text-sm">
+										Allow readers to rate your story
+									</p>
+								</div>
+							</div>
+							<div class="flex items-center gap-3">
+								@checkbox.Checkbox(checkbox.Props{
+									ID:    "featured",
+									Name:  "settings",
+									Value: "featured",
+								})
+								@label.Label(label.Props{
+									For: "featured",
+								}) {
+									Feature this story
+								}
+							</div>
+						</div>
+					</div>
+
+					<div class="space-y-2">
+						<label for="publish-date" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+							Publish Date
+						</label>
+						@datepicker.DatePicker(datepicker.Props{
+							ID:          "publish-date",
+							Name:        "publish_date",
+							Placeholder: "Select publish date",
+						})
+						<p class="text-sm text-muted-foreground">
+							Choose when to publish your story. Leave empty for immediate publication.
+						</p>
+					</div>
+
+					<div class="flex justify-end gap-3">
+						@dialog.Trigger(dialog.TriggerProps{
+							For: "cancel-dialog",
+						}) {
+							@button.Button(button.Props{
+								Type:    "button",
+								Variant: button.VariantGhost,
+								Class:   "px-6",
+							}) {
+								Cancel
+							}
+						}
+						@button.Button(button.Props{
+							Type:    "submit",
+							Variant: button.VariantDefault,
+							Class:   "px-6",
+						}) {
+							Create Story
+						}
+					</div>
+				</form>
+			</div>
+
+			<!-- Stories Table -->
+			<div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+				@table.Table() {
+					@table.Caption() {
+						A list of all your stories.
+					}
+					@table.Header() {
+						@table.Row() {
+							@table.Head() {
+								Title
+							}
+							@table.Head() {
+								Tags
+							}
+							@table.Head() {
+								Status
+							}
+							@table.Head() {
+								Published Date
+							}
+							@table.Head() {
+								Actions
+							}
+						}
+					}
+					@table.Body() {
+						@table.Row() {
+							@table.Cell() {
+								<div class="font-medium text-[#5D5CFF] hover:underline">
+									<a href="/story/1">The Adventure Begins</a>
+								</div>
+								<div class="text-sm text-gray-500 line-clamp-1 max-w-md">
+									Join our hero on an epic journey through uncharted territories...
+								</div>
+							}
+							@table.Cell() {
+								<div class="flex gap-1">
+									<span class="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">fiction</span>
+									<span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">adventure</span>
+								</div>
+							}
+							@table.Cell() {
+								<span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Published</span>
+							}
+							@table.Cell() {
+								<span class="text-sm text-gray-500">Jan 15, 2025</span>
+							}
+							@table.Cell() {
+								<div class="flex gap-2">
+									@button.Button(button.Props{
+										Size:   button.SizeSm,
+										Variant: button.VariantGhost,
+										Class:  "h-8 w-8 p-0",
+										Href:    "/story/1/edit",
+									}) {
+										Edit
+									}
+									@button.Button(button.Props{
+										Size:   button.SizeSm,
+										Variant: button.VariantGhost,
+										Class:  "h-8 w-8 p-0 text-red-500 hover:text-red-600",
+										Href:    "/story/1/delete",
+									}) {
+										Delete
+									}
+								</div>
+							}
+						}
+						@table.Row() {
+							@table.Cell() {
+								<div class="font-medium text-[#5D5CFF] hover:underline">
+									<a href="/story/2">Mystery of the Lost City</a>
+								</div>
+								<div class="text-sm text-gray-500 line-clamp-1 max-w-md">
+									An ancient city holds secrets that have been buried for centuries...
+								</div>
+							}
+							@table.Cell() {
+								<div class="flex gap-1">
+									<span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">mystery</span>
+									<span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">sci-fi</span>
+								</div>
+							}
+							@table.Cell() {
+								<span class="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Published</span>
+							}
+							@table.Cell() {
+								<span class="text-sm text-gray-500">Jan 10, 2025</span>
+							}
+							@table.Cell() {
+								<div class="flex gap-2">
+									@button.Button(button.Props{
+										Size:   button.SizeSm,
+										Variant: button.VariantGhost,
+										Class:  "h-8 w-8 p-0",
+										Href:    "/story/2/edit",
+									}) {
+										Edit
+									}
+									@button.Button(button.Props{
+										Size:   button.SizeSm,
+										Variant: button.VariantGhost,
+										Class:  "h-8 w-8 p-0 text-red-500 hover:text-red-600",
+										Href:    "/story/2/delete",
+									}) {
+										Delete
+									}
+								</div>
+							}
+						}
+						@table.Row() {
+							@table.Cell() {
+								<div class="font-medium text-[#5D5CFF] hover:underline">
+									<a href="/story/3">Love in Paris</a>
+								</div>
+								<div class="text-sm text-gray-500 line-clamp-1 max-w-md">
+									A romantic tale of two souls finding each other in the city of lights...
+								</div>
+							}
+							@table.Cell() {
+								<div class="flex gap-1">
+									<span class="inline-block px-2 py-1 bg-pink-100 text-pink-800 text-xs rounded">romance</span>
+								</div>
+							}
+							@table.Cell() {
+								<span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">Draft</span>
+							}
+							@table.Cell() {
+								<span class="text-sm text-gray-500">Jan 5, 2025</span>
+							}
+							@table.Cell() {
+								<div class="flex gap-2">
+									@button.Button(button.Props{
+										Size:   button.SizeSm,
+										Variant: button.VariantGhost,
+										Class:  "h-8 w-8 p-0",
+										Href:    "/story/3/edit",
+									}) {
+										Edit
+									}
+									@button.Button(button.Props{
+										Size:   button.SizeSm,
+										Variant: button.VariantGhost,
+										Class:  "h-8 w-8 p-0 text-red-500 hover:text-red-600",
+										Href:    "/story/3/delete",
+									}) {
+										Delete
+									}
+								</div>
+							}
+						}
+					}
+					@table.Footer() {
+						@table.Row() {
+							@table.Head() {
+								3 stories total
+							}
+							@table.Head() {
+								Showing 1-3 of 3
+							}
+							@table.Head() {
+								Next
+							}
+						}
+					}
+				}
+			</div>
+
+			<!-- Story Analytics -->
+			<div class="mt-12">
+				<h2 class="text-xl font-semibold text-gray-900 mb-6">Story Analytics</h2>
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+					<!-- Views Chart -->
+					@card.Card(card.Props{Class: "max-w-sm"}) {
+						@card.Content() {
+							<h3 class="text-sm font-medium text-gray-700 mb-4">Views Over Time</h3>
+							@chart.Chart(chart.Props{
+								Variant:     chart.VariantLine,
+								ShowYGrid:   true,
+								ShowXLabels: true,
+								Data: chart.Data{
+									Labels: []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"},
+									Datasets: []chart.Dataset{
+										{
+											Label:   "Views",
+											Data:    []float64{120, 190, 150, 250, 220, 300},
+											Tension: 0.4,
+										},
+									},
+								},
+							})
+						}
+					}
+
+					<!-- Story Status -->
+					@card.Card(card.Props{Class: "max-w-sm"}) {
+						@card.Content() {
+							<h3 class="text-sm font-medium text-gray-700 mb-4">Story Status</h3>
+							@chart.Chart(chart.Props{
+								Variant:    chart.VariantDoughnut,
+								ShowLegend: true,
+								Data: chart.Data{
+									Labels: []string{"Published", "Draft", "Review"},
+									Datasets: []chart.Dataset{
+										{
+											Data:  []float64{12, 5, 3},
+											Label: "Stories",
+										},
+									},
+								},
+							})
+						}
+					}
+
+					<!-- Category Distribution -->
+					@card.Card(card.Props{Class: "max-w-sm"}) {
+						@card.Content() {
+							<h3 class="text-sm font-medium text-gray-700 mb-4">Categories</h3>
+							@chart.Chart(chart.Props{
+								Variant: chart.VariantPie,
+								Data: chart.Data{
+									Labels: []string{"Fiction", "Adventure", "Romance", "Mystery", "Sci-Fi"},
+									Datasets: []chart.Dataset{
+										{
+											Data: []float64{8, 6, 4, 3, 2},
+										},
+									},
+								},
+							})
+						}
+					}
+
+					<!-- Monthly Stories -->
+					@card.Card(card.Props{Class: "max-w-sm"}) {
+						@card.Content() {
+							<h3 class="text-sm font-medium text-gray-700 mb-4">Stories Published</h3>
+							@chart.Chart(chart.Props{
+								Variant:     chart.VariantBar,
+								ShowYGrid:   true,
+								ShowXLabels: true,
+								Data: chart.Data{
+									Labels: []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"},
+									Datasets: []chart.Dataset{
+										{
+											Label: "Mobile",
+											Data:  []float64{12, 19, 12, 5, 2, 3},
+										},
+										{
+											Label: "Desktop",
+											Data:  []float64{3, 9, 18, 3, 21, 13},
+										},
+									},
+								},
+							})
+						}
+					}
+				</div>
+			</div>
+
+			<!-- Pagination -->
+			<div class="flex justify-center pt-6">
+				@pagination.Pagination() {
+					@pagination.Content() {
+						@pagination.Item() {
+							@pagination.Previous(pagination.PreviousProps{
+								Href:     "?page=1",
+								Disabled: true,
+								Label:    "Previous",
+							})
+						}
+						@pagination.Item() {
+							@pagination.Link(pagination.LinkProps{
+								Href:     "?page=1",
+								IsActive: true,
+							}) {
+								1
+							}
+						}
+						@pagination.Item() {
+							@pagination.Link(pagination.LinkProps{
+								Href: "?page=2",
+							}) {
+								2
+							}
+						}
+						@pagination.Item() {
+							@pagination.Link(pagination.LinkProps{
+								Href: "?page=3",
+							}) {
+								3
+							}
+						}
+						@pagination.Item() {
+							@pagination.Next(pagination.NextProps{
+								Href:     "?page=2",
+								Label:    "Next",
+								Disabled: true,
+							})
+						}
+					}
+				}
+			</div>
+		</div>
+	</div>
+
+	@dialog.Dialog(dialog.Props{
+		ID: "cancel-dialog",
+	}) {
+		@dialog.Content(dialog.ContentProps{
+			Class: "max-w-md",
+		}) {
+			@dialog.Header() {
+				@dialog.Title() {
+					Discard Story?
+				}
+				@dialog.Description() {
+					Are you sure you want to discard your story? This action cannot be undone.
+				}
+			}
+			@dialog.Footer() {
+				@dialog.Close() {
+					@button.Button(button.Props{
+						Variant: button.VariantOutline,
+					}) {
+						Keep Writing
+					}
+				}
+				@button.Button(button.Props{
+					Href:    "/dashboard",
+					Variant: button.VariantDefault,
+				}) {
+					Discard
 				}
 			}
 		}
-	</div>
+	}
 }

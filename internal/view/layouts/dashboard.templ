@@ -7,6 +7,10 @@ import (
 	"github.com/minhtranin/ct/internal/view/shared/sidebar"
 	"github.com/minhtranin/ct/internal/view/shared/dialog"
 	"github.com/minhtranin/ct/internal/view/shared/popover"
+	"github.com/minhtranin/ct/internal/view/shared/datepicker"
+	"github.com/minhtranin/ct/internal/view/shared/calendar"
+	"github.com/minhtranin/ct/internal/view/shared/checkbox"
+	"github.com/minhtranin/ct/internal/view/shared/chart"
 )
 
 // Dashboard is the layout for authenticated pages with sidebar navigation
@@ -21,6 +25,10 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 			@toast.Script()
 			@dialog.Script()
 			@popover.Script()
+			@datepicker.Script()
+			@calendar.Script()
+			@checkbox.Script()
+			@chart.Script()
 		</head>
 		<body class="bg-gray-50">
 			@sidebar.Layout() {
