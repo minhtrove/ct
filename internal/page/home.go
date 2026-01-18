@@ -72,9 +72,15 @@ func Dashboard(f *fiber.Ctx) error {
 		return f.Redirect("/signin")
 	}
 
+	// Read sidebar state from cookie
+	collapsed := false
+	if f.Cookies("sidebar_state") == "false" {
+		collapsed = true
+	}
+
 	return render.HTML(
 		f,
-		layouts.Base("Dashboard", view.DashboardPage("", &user)),
+		layouts.Dashboard("Dashboard", view.DashboardPage("", &user), collapsed, user.Email),
 	)
 }
 

@@ -1,0 +1,137 @@
+package layouts
+
+import (
+	"strings"
+
+	"github.com/minhtranin/ct/internal/view/shared/toast"
+	"github.com/minhtranin/ct/internal/view/shared/sidebar"
+	"github.com/minhtranin/ct/internal/view/shared/dialog"
+	"github.com/minhtranin/ct/internal/view/shared/popover"
+)
+
+// Dashboard is the layout for authenticated pages with sidebar navigation
+templ Dashboard(title string, c templ.Component, collapsed bool, userEmail string) {
+	<!DOCTYPE html>
+	<html>
+		<head>
+			<title>{ title }</title>
+			<link rel="stylesheet" href="/static/output.css"/>
+			<script src="/static/htmx.min.js" defer></script>
+			@sidebar.Script()
+			@toast.Script()
+			@dialog.Script()
+			@popover.Script()
+		</head>
+		<body class="bg-gray-50">
+			@sidebar.Layout() {
+				@sidebar.Sidebar(sidebar.Props{
+					ID:          "main-sidebar",
+					Collapsed:   false,
+					Variant:     sidebar.VariantInset,
+					Collapsible: sidebar.CollapsibleNone,
+					Class:       "!bg-slate-900 !text-white",
+				}) {
+					@sidebar.Header() {
+						@sidebar.Menu() {
+							@sidebar.MenuItem() {
+								@sidebar.MenuButton(sidebar.MenuButtonProps{
+									Href: "/dashboard",
+								}) {
+									<img src="/static/logo-full-256x.webp" alt="Company Logo" class="h-9"/>
+								}
+							}
+						}
+					}
+					@sidebar.Content() {
+						@sidebar.Group() {
+							@sidebar.GroupLabel(sidebar.GroupLabelProps{
+								Attributes: templ.Attributes{"class": "!text-white/80"},
+							}) {
+								Menu
+							}
+							@sidebar.Menu() {
+								@sidebar.MenuItem() {
+									@sidebar.MenuButton(sidebar.MenuButtonProps{
+										Href:    "/dashboard",
+										Tooltip: "Dashboard",
+										Attributes: templ.Attributes{"class": "!text-white hover:!text-white/80"},
+									}) {
+										<span class="w-4 h-4 mr-3">
+											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+										</span>
+										<span>Dashboard</span>
+									}
+								}
+								@sidebar.MenuItem() {
+									@sidebar.MenuButton(sidebar.MenuButtonProps{
+										Href:    "/story",
+										Tooltip: "Story",
+										Attributes: templ.Attributes{"class": "!text-white hover:!text-white/80"},
+									}) {
+										<span class="w-4 h-4 mr-3">
+											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1"/><path d="M9 7h0.01"/></svg>
+										</span>
+										<span>Story</span>
+									}
+								}
+							}
+						}
+						@sidebar.Separator(sidebar.SeparatorProps{
+							Attributes: templ.Attributes{"class": "!bg-white/10"},
+						})
+						@sidebar.Group() {
+							@sidebar.GroupLabel(sidebar.GroupLabelProps{
+								Attributes: templ.Attributes{"class": "!text-white/80"},
+							}) {
+								Account
+							}
+							@sidebar.Menu() {
+								@sidebar.MenuItem() {
+									@sidebar.MenuButton(sidebar.MenuButtonProps{
+										Href:    "/forgot-password",
+										Tooltip: "Change Password",
+										Attributes: templ.Attributes{"class": "!text-white hover:!text-white/80"},
+									}) {
+										<span class="w-4 h-4 mr-3">
+											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><circle cx="11.5" cy="11.5" r="2.5"/><path d="M20 2v6h6"/><path d="M6.5 12.5a5.5 5.5 0 0 1 7.5 0l4.2 4.2a5.5 5.5 0 0 1 0 7.8l-2.1 2.1a5.5 5.5 0 0 1-7.8 0l-4.2-4.2a5.5 5.5 0 0 1 0-7.8Z"/></svg>
+										</span>
+										<span>Change Password</span>
+									}
+								}
+								@sidebar.MenuItem() {
+									@sidebar.MenuButton(sidebar.MenuButtonProps{
+										Href:    "/logout",
+										Tooltip: "Logout",
+										Attributes: templ.Attributes{"class": "!text-white hover:!text-white/80"},
+									}) {
+										<span class="w-4 h-4 mr-3">
+											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"/><line x1="21" x2="9" y1="12" y2="12"/><path d="M16 7h0a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h0"/></svg>
+										</span>
+										<span>Logout</span>
+									}
+								}
+							}
+						}
+					}
+					@sidebar.Footer() {
+						@sidebar.Menu() {
+							@sidebar.MenuItem() {
+								<div class="flex items-center gap-3 px-2">
+									<div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+										{ strings.ToUpper(userEmail[0:1]) }
+									</div>
+									<span class="text-sm text-white/80 truncate">{ userEmail }</span>
+								</div>
+							}
+						}
+					}
+				}
+				@sidebar.Inset() {
+					<div class="flex flex-col min-h-screen bg-white">
+						@c
+					</div>
+				}
+			}
+		</body>
+	</html>
+}
