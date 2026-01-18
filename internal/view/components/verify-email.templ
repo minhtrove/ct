@@ -1,0 +1,183 @@
+package view
+
+import (
+	"github.com/minhtranin/ct/internal/view/shared/inputotp"
+	"time"
+)
+
+// VerifyEmailPage shows after signup, prompting user to verify their email
+templ VerifyEmailPage(title string, email string, lastEmailSentAt time.Time) {
+	<div class="min-h-screen flex">
+		<!-- Left Side: Verification Form -->
+		<div class="w-full lg:w-1/2 flex items-center justify-center px-8 py-12 bg-gradient-to-br from-gray-50 to-gray-100">
+			<div class="w-full max-w-md">
+				<div class="bg-white rounded-2xl shadow-xl p-8">
+					<!-- Success Icon -->
+					<div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+						<svg class="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14"></path>
+						</svg>
+					</div>
+
+					<h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Check your email!</h2>
+					<p class="text-gray-600 mb-2 text-center">
+						We've sent a verification code to <strong>{ email }</strong>
+					</p>
+					<p class="text-gray-500 text-sm mb-8 text-center">
+						Please enter the 6-digit code below to verify your account and continue.
+					</p>
+
+					<!-- Verification Form -->
+					<form hx-post="/api/auth/verify-code" hx-target="#toast" class="space-y-6">
+						<input type="hidden" name="email" value={ email }/>
+						<div id="toast"></div>
+
+						<div class="flex justify-center gap-2" data-tui-inputotp-wrapper>
+							@inputotp.InputOTP(inputotp.Props{
+								Name: "code",
+							}) {
+								@inputotp.Group(inputotp.GroupProps{Class: "flex gap-2 justify-center"}) {
+									@inputotp.Slot(inputotp.SlotProps{
+										Index: 0,
+										Class: "w-14 h-14 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D5CFF] focus:border-[#5D5CFF] outline-none transition",
+									})
+									@inputotp.Slot(inputotp.SlotProps{
+										Index: 1,
+										Class: "w-14 h-14 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D5CFF] focus:border-[#5D5CFF] outline-none transition",
+									})
+									@inputotp.Slot(inputotp.SlotProps{
+										Index: 2,
+										Class: "w-14 h-14 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D5CFF] focus:border-[#5D5CFF] outline-none transition",
+									})
+									@inputotp.Slot(inputotp.SlotProps{
+										Index: 3,
+										Class: "w-14 h-14 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D5CFF] focus:border-[#5D5CFF] outline-none transition",
+									})
+									@inputotp.Slot(inputotp.SlotProps{
+										Index: 4,
+										Class: "w-14 h-14 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D5CFF] focus:border-[#5D5CFF] outline-none transition",
+									})
+									@inputotp.Slot(inputotp.SlotProps{
+										Index: 5,
+										Class: "w-14 h-14 text-2xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#5D5CFF] focus:border-[#5D5CFF] outline-none transition",
+									})
+								}
+							}
+						</div>
+
+						<button
+							type="submit"
+							class="w-full bg-[#5D5CFF] text-white font-medium py-2.5 px-4 rounded-lg hover:bg-[#4B4BDB] transition-colors flex items-center justify-center"
+							hx-indicator="#verify-spinner"
+						>
+							<span id="verify-text">Verify Email</span>
+							<svg
+								id="verify-spinner"
+								class="hidden animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+						</button>
+					</form>
+
+					<!-- Resend Section -->
+					<div class="mt-6 pt-6 border-t border-gray-200 text-center">
+						<p class="text-sm text-gray-600 mb-3">Didn't receive the code?</p>
+						<button
+							id="resend-btn"
+							hx-post={ "/api/auth/resend-verification?email=" + email }
+							hx-target="#resend-message"
+							hx-swap="innerHTML"
+							class="text-[#5D5CFF] font-semibold hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+							hx-indicator="#resend-spinner"
+						>
+							<span id="resend-text">Resend verification code</span>
+							<svg
+								id="resend-spinner"
+								class="hidden animate-spin inline ml-2 h-4 w-4"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+						</button>
+						<span id="resend-countdown" class="text-sm text-gray-500 ml-2"></span>
+						<span id="resend-message" class="text-sm ml-2"></span>
+					</div>
+
+					<div class="mt-4 text-center">
+						<a href="/signin" class="text-sm text-gray-600 hover:text-gray-900">
+							← Back to Sign In
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Right Side: Company Branding -->
+		<div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#5D5CFF] to-[#4B5563] items-center justify-center p-12">
+			<div class="max-w-lg text-center text-white">
+				<img src="/static/logo-full-256x.webp" alt="Company Logo" class="h-24 mx-auto mb-8"/>
+				<h1 class="text-4xl font-bold mb-4">Expert Software Development</h1>
+				<p class="text-xl opacity-90 mb-8">
+					We build scalable, high-performance solutions using cutting-edge technologies tailored to your business needs.
+				</p>
+				<div class="grid grid-cols-3 gap-6 text-center">
+					<div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+						<div class="text-3xl font-bold">10K+</div>
+						<div class="text-sm opacity-80">Active Users</div>
+					</div>
+					<div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+						<div class="text-3xl font-bold">99.9%</div>
+						<div class="text-sm opacity-80">Uptime</div>
+					</div>
+					<div class="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+						<div class="text-3xl font-bold">24/7</div>
+						<div class="text-sm opacity-80">Support</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script>
+		(function() {
+			const resendBtn = document.getElementById('resend-btn');
+			const countdownEl = document.getElementById('resend-countdown');
+
+			// Calculate remaining cooldown on server side
+			const lastSent = { fmt.Sprintf("%d", lastEmailSentAt.UnixMilli()) };
+			const now = Date.now();
+			const cooldownMs = 60 * 1000; // 1 minute
+			const timeSinceLastSent = now - lastSent;
+			const remainingMs = cooldownMs - timeSinceLastSent;
+
+			let secondsLeft = 0;
+			if (remainingMs > 0) {
+				secondsLeft = Math.ceil(remainingMs / 1000);
+			}
+
+			if (secondsLeft > 0) {
+				resendBtn.disabled = true;
+
+				const updateCountdown = () => {
+					countdownEl.textContent = 'Available in ' + secondsLeft + 's';
+					secondsLeft--;
+
+					if (secondsLeft < 0) {
+						countdownEl.textContent = '';
+						resendBtn.disabled = false;
+					} else {
+						setTimeout(updateCountdown, 1000);
+					}
+				};
+
+				updateCountdown();
+			}
+		})();
+	</script>
+}

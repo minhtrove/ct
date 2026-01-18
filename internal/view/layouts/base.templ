@@ -1,5 +1,10 @@
 package layouts
 
+import (
+	"github.com/minhtranin/ct/internal/view/shared/inputotp"
+	"github.com/minhtranin/ct/internal/view/shared/toast"
+)
+
 templ Base(title string, c templ.Component) {
 	<!DOCTYPE html>
 	<html>
@@ -7,7 +12,8 @@ templ Base(title string, c templ.Component) {
 			<title>{ title }</title>
 			<link rel="stylesheet" href="/static/output.css"/>
 			<script src="/static/htmx.min.js" defer></script>
-			<!-- <script src="/static/alpine.min.js" defer></script> -->
+			@inputotp.Script()
+			@toast.Script()
 		</head>
 		<body>
 			@c

@@ -9,6 +9,7 @@ import (
 	fiberLog "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
 	"github.com/minhtranin/ct/internal/db"
+	"github.com/minhtranin/ct/internal/handler"
 	"github.com/minhtranin/ct/internal/logger"
 	"github.com/minhtranin/ct/internal/router"
 )
@@ -16,9 +17,32 @@ import (
 func main() {
 	defer logger.Logger.Sync()
 
+	// Load environment variables
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
+
+	// Initialize logger
+	if err := logger.InitLogger(); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+
+	// Connect to MongoDB
+	uri := os.Getenv("MONGODB_URI")
+	client, err := db.ConnectToMongoDB(uri)
+	if err != nil {
+		logger.Error("Main", "Error connecting to MongoDB: ")
+	}
+	defer client.Disconnect(context.Background())
+
+	// Initialize auth service
+	handler.InitAuth(client)
+
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		AppName: "CT",
+		// Increase body limit for larger requests
+		BodyLimit: 4 * 1024 * 1024, // 4MB
 	})
 
 	// Serve static files from the "./static" directory
@@ -35,22 +59,6 @@ func main() {
 
 	// Register routes
 	router.Register(app)
-
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
-	}
-
-	if err := logger.InitLogger(); err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
-	}
-
-	uri := os.Getenv("MONGODB_URI")
-	client, err := db.ConnectToMongoDB(uri)
-	if err != nil {
-		logger.Error("Main", "Error connecting to MongoDB: ")
-	}
-
-	defer client.Disconnect(context.Background())
 
 	log.Fatal(app.Listen(":3000"))
 }

@@ -1,0 +1,55 @@
+package view
+
+import "github.com/minhtranin/ct/internal/models"
+
+templ DashboardPage(title string, user *models.User) {
+	<div class="min-h-screen bg-gray-50">
+		<!-- Navigation -->
+		<nav class="bg-white shadow-sm border-b border-gray-200">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="flex justify-between h-16">
+					<div class="flex items-center">
+						<img src="/static/logo-full-256x.webp" alt="Company Logo" class="h-8"/>
+					</div>
+					<div class="flex items-center gap-4">
+						<span class="text-gray-700">{ user.Email }</span>
+						<a href="/logout" class="text-[#5D5CFF] hover:underline">Logout</a>
+					</div>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Main Content -->
+		<div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+			<div class="bg-white rounded-lg shadow p-8">
+				<h1 class="text-3xl font-bold text-gray-900 mb-4">Dashboard</h1>
+				<p class="text-gray-600 mb-8">Welcome to your dashboard!</p>
+
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<div class="bg-gradient-to-br from-[#5D5CFF] to-[#4B5563] rounded-lg p-6 text-white">
+						<h3 class="text-lg font-semibold mb-2">Account Status</h3>
+						<p class="text-3xl font-bold">Active</p>
+						<p class="text-sm opacity-80 mt-2">Member since { user.CreatedAt.Format("Jan 2006") }</p>
+					</div>
+					<div class="bg-white border border-gray-200 rounded-lg p-6">
+						<h3 class="text-lg font-semibold mb-2 text-gray-900">Email</h3>
+						<p class="text-gray-600">{ user.Email }</p>
+						if !user.EmailVerified {
+							<span class="inline-block mt-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
+								Not verified
+							</span>
+						} else {
+							<span class="inline-block mt-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+								Verified
+							</span>
+						}
+					</div>
+					<div class="bg-white border border-gray-200 rounded-lg p-6">
+						<h3 class="text-lg font-semibold mb-2 text-gray-900">Last Login</h3>
+						<p class="text-gray-600">{ user.LastLoginAt.Format("Jan 2, 2006 at 3:04 PM") }</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}

@@ -73,6 +73,17 @@
   --ring: oklch(0.556 0 0);
 }
 
+/* HTMX Loading Indicator */
+.htmx-indicator {
+  display: none;
+}
+.htmx-request .htmx-indicator {
+  display: inline;
+}
+.htmx-request.htmx-indicator {
+  display: inline;
+}
+
 @layer base {
   * {
     @apply border-border;
