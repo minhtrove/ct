@@ -2,10 +2,14 @@
 set -e
 
 APP_NAME="ct-finance"
-APP_DIR="/home/ec2-user/app"
+APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVICE_NAME="ct-finance"
 
 echo "🚀 Starting deployment..."
+echo "📁 APP_DIR: ${APP_DIR}"
+echo "📁 Working directory: $(pwd)"
+echo "📁 Files present:"
+ls -lah "${APP_DIR}/"
 
 # Stop the service if it's running
 if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
@@ -19,14 +23,13 @@ if [ -f "${APP_DIR}/${APP_NAME}.old" ]; then
 fi
 
 if [ -f "${APP_DIR}/${APP_NAME}" ]; then
+    echo "📦 Backing up old binary..."
     mv ${APP_DIR}/${APP_NAME} ${APP_DIR}/${APP_NAME}.old
 fi
 
-# Move new binary
-echo "📦 Installing new binary..."
-mv ${APP_DIR}/${APP_NAME} ${APP_DIR}/${APP_NAME}
-
-# Set permissions
+# New binary is already in place from tar extraction
+# Just set permissions
+echo "📦 Setting permissions on new binary..."
 chmod +x ${APP_DIR}/${APP_NAME}
 
 # Install/update systemd service
