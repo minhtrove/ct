@@ -395,6 +395,8 @@ func ResendVerification(c *fiber.Ctx) error {
 
 // ForgotPassword handles POST /api/auth/forgot-password
 func ForgotPassword(c *fiber.Ctx) error {
+	logger.Info("Auth", "ForgotPassword called")
+
 	email := strings.TrimSpace(c.FormValue("email"))
 
 	if email == "" {
@@ -697,6 +699,11 @@ func GetSession(c *fiber.Ctx) (string, error) {
 		return "", err
 	}
 	return userID.Hex(), nil
+}
+
+// ClearSession clears the user session (for use in middleware)
+func ClearSession(c *fiber.Ctx) error {
+	return sessionManager.ClearSession(c)
 }
 
 // GetDB returns the database instance (for use in page handlers)

@@ -3,46 +3,48 @@ package router
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/minhtranin/ct/internal/auth"
 	"github.com/minhtranin/ct/internal/handler"
+	"github.com/minhtranin/ct/internal/middleware"
 )
 
 func registerAPI(app *fiber.App) {
-	api := app.Group("/api")
-	api.Get("/health", handler.Health)
+	// Public routes - NO auth middleware
+	app.Post("/api/auth/signup", handler.SignUp)
+	app.Post("/api/auth/signin", handler.SignIn)
+	app.Post("/api/auth/verify-code", handler.VerifyCode)
+	app.Post("/api/auth/resend-verification", handler.ResendVerification)
+	app.Post("/api/auth/forgot-password", handler.ForgotPassword)
+	app.Post("/api/auth/reset-password", handler.ResetPassword)
+	app.Get("/api/auth/verify-email", handler.VerifyEmail)
+	app.Get("/api/auth/logout", handler.Logout)
+	app.Get("/api/health", handler.Health)
 
-	// Auth routes
-	auth := api.Group("/auth")
-	auth.Post("/signup", handler.SignUp)
-	auth.Post("/signin", handler.SignIn)
-	auth.Post("/verify-code", handler.VerifyCode)
-	auth.Post("/resend-verification", handler.ResendVerification)
-	auth.Post("/forgot-password", handler.ForgotPassword)
-	auth.Post("/reset-password", handler.ResetPassword)
-	auth.Get("/verify-email", handler.VerifyEmail)
-	auth.Get("/logout", handler.Logout)
+	// Protected routes - apply RequireAuth individually
+	// Transaction routes - employee+
+	app.Post("/api/transactions", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleEmployee]), handler.CreateTransaction)
+	app.Post("/api/transactions/:id", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleEmployee]), handler.UpdateTransaction)
+	app.Post("/api/transactions/:id/delete", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleEmployee]), handler.DeleteTransaction)
 
-	// Account routes
-	api.Post("/accounts", handler.CreateAccount)
-	api.Post("/accounts/:id", handler.UpdateAccount) // POST for HTML forms
-	api.Post("/accounts/:id/delete", handler.DeleteAccount)
+	// Approval routes - holder+
+	app.Post("/api/transactions/:id/approve", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleHolder]), handler.ApproveTransaction)
+	app.Post("/api/transactions/:id/reject", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleHolder]), handler.RejectTransaction)
 
-	// Category routes
-	api.Post("/categories", handler.CreateCategory)
-	api.Post("/categories/:id", handler.UpdateCategory) // POST for HTML forms
-	api.Post("/categories/:id/delete", handler.DeleteCategory)
+	// Account routes - admin+
+	app.Post("/api/accounts", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.CreateAccount)
+	app.Post("/api/accounts/:id", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.UpdateAccount)
+	app.Post("/api/accounts/:id/delete", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.DeleteAccount)
 
-	// Budget routes
-	api.Post("/budgets", handler.CreateBudget)
-	api.Post("/budgets/:id", handler.UpdateBudget) // POST for HTML forms
-	api.Post("/budgets/:id/delete", handler.DeleteBudget)
+	// Category routes - admin+
+	app.Post("/api/categories", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.CreateCategory)
+	app.Post("/api/categories/:id", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.UpdateCategory)
+	app.Post("/api/categories/:id/delete", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.DeleteCategory)
 
-	// Transaction routes
-	api.Post("/transactions", handler.CreateTransaction)
-	api.Post("/transactions/:id", handler.UpdateTransaction) // POST for HTML forms
-	api.Post("/transactions/:id/delete", handler.DeleteTransaction)
-	api.Post("/transactions/:id/approve", handler.ApproveTransaction)
-	api.Post("/transactions/:id/reject", handler.RejectTransaction)
+	// Budget routes - admin+
+	app.Post("/api/budgets", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.CreateBudget)
+	app.Post("/api/budgets/:id", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.UpdateBudget)
+	app.Post("/api/budgets/:id/delete", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), handler.DeleteBudget)
 
-	// User management routes
-	api.Post("/users/:id/role", handler.UpdateUserRole)
+	// User management routes - manager+
+	app.Post("/api/users/:id/role", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleManager]), handler.UpdateUserRole)
 }

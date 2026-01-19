@@ -31,6 +31,12 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 			@checkbox.Script()
 			@chart.Script()
 			<script>
+				// Debug user role
+				console.log('User role:', '{ userRole }');
+				console.log('Role level:', { auth.GetRoleLevel(userRole) });
+				console.log('Employee level:', { auth.RoleLevel[auth.RoleEmployee] });
+				console.log('Show Team?', { auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleEmployee] });
+
 				// Reinitialize components after HTMX content swaps
 				document.body.addEventListener('htmx:afterSwap', function(evt) {
 					// Trigger chart initialization for new content
@@ -113,30 +119,31 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 						}
 					}
 					@sidebar.Content() {
-						// Main Menu Group
-						@sidebar.Group() {
-							@sidebar.GroupLabel(sidebar.GroupLabelProps{
-								Attributes: templ.Attributes{"class": "!text-white/80"},
-							}) {
-								Main
-							}
-							@sidebar.Menu() {
-								@sidebar.MenuItem() {
-									@sidebar.MenuButton(sidebar.MenuButtonProps{
-										Href:     "/dashboard",
-										Tooltip:  "Dashboard",
-										IsActive: currentPath == "/dashboard" || currentPath == "/",
-										Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
-									}) {
-										<span class="w-4 h-4 mr-3">
-											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-										</span>
-										<span>Dashboard</span>
-									}
+						// Main Menu Group (hidden for employee/blank role)
+						if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleHolder] {
+							@sidebar.Group() {
+								@sidebar.GroupLabel(sidebar.GroupLabelProps{
+									Attributes: templ.Attributes{"class": "!text-white/80"},
+								}) {
+									Main
 								}
+								@sidebar.Menu() {
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:     "/dashboard",
+											Tooltip:  "Dashboard",
+											IsActive: currentPath == "/dashboard" || currentPath == "/",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+											</span>
+											<span>Dashboard</span>
+										}
+									}
 
-								// Transactions (employee+)
-								if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleEmployee] {
+									// Transactions (employee+)
+									if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleEmployee] {
 									@sidebar.MenuItem() {
 										@sidebar.MenuButton(sidebar.MenuButtonProps{
 											Href:    "/transactions",
@@ -203,6 +210,7 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 									}
 								}
 							}
+						}
 						}
 
 						@sidebar.Separator(sidebar.SeparatorProps{
@@ -274,8 +282,8 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 							}
 						}
 
-						// Team/Users Group (manager+)
-						if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleManager] {
+						// Team/Users Group - holder+ only
+						if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleHolder] {
 							@sidebar.Separator(sidebar.SeparatorProps{
 								Attributes: templ.Attributes{"class": "!bg-white/10"},
 							})

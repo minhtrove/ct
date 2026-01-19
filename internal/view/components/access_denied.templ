@@ -1,0 +1,33 @@
+package view
+
+// AccessDeniedPage shows when user doesn't have permission to access a page
+templ AccessDeniedPage() {
+	<div class="flex flex-col items-center justify-center min-h-[400px] px-4">
+		<div class="text-center max-w-md">
+			<!-- Lock Icon -->
+			<div class="flex justify-center mb-6">
+				<div class="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+					</svg>
+				</div>
+			</div>
+
+			<!-- Title -->
+			<h1 class="text-3xl font-bold text-gray-900 mb-3">Access Denied</h1>
+
+			<!-- Description -->
+			<p class="text-gray-600 text-lg mb-8">
+				You don't have permission to access this page. Please contact your administrator if you believe this is an error.
+			</p>
+
+			<!-- Back to Dashboard Button -->
+			<a href="/dashboard" class="inline-flex items-center justify-center rounded-full bg-[#5D5CFF] text-white px-8 py-3 font-medium hover:bg-[#4B4BE6] transition-colors">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+				</svg>
+				Back to Dashboard
+			</a>
+		</div>
+	</div>
+}

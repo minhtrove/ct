@@ -2,11 +2,13 @@ package router
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/minhtranin/ct/internal/auth"
+	"github.com/minhtranin/ct/internal/middleware"
 	"github.com/minhtranin/ct/internal/page"
 )
 
 func registerPages(r fiber.Router) {
-	// Public pages
+	// Public pages - NO auth middleware
 	r.Get("/", page.Home)
 	r.Get("/signin", page.SignIn)
 	r.Get("/signup", page.SignUp)
@@ -15,18 +17,32 @@ func registerPages(r fiber.Router) {
 	r.Get("/reset-password", page.ResetPassword)
 	r.Get("/logout", page.Logout)
 
-	// Authenticated pages
-	r.Get("/dashboard", page.Dashboard)
-	r.Get("/story", page.Story)
+	// Protected pages - apply RequireAuth individually to avoid catching API routes
+	// Dashboard (all authenticated users)
+	r.Get("/dashboard", middleware.RequireAuth(), page.Dashboard)
+
+	// Access Denied page
+	r.Get("/access-denied", middleware.RequireAuth(), page.AccessDenied)
+
+	// Storybook (developer only)
+	r.Get("/story", middleware.RequireAuth(), middleware.RequirePermission(auth.IsDeveloper), page.Story)
 
 	// Income & Expense Management pages
-	r.Get("/transactions", page.TransactionsPage)
-	r.Get("/accounts", page.AccountsPage)
-	r.Get("/categories", page.CategoriesPage)
-	r.Get("/budgets", page.BudgetsPage)
-	r.Get("/reports", page.ReportsPage)
-	r.Get("/audit", page.AuditPage)
-	r.Get("/approvals", page.ApprovalsPage)
-	r.Get("/settings", page.SettingsPage)
-	r.Get("/team", page.TeamPage)
+	r.Get("/transactions", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleEmployee]), page.TransactionsPage)
+
+	// Approval pages (holder+)
+	r.Get("/approvals", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleHolder]), page.ApprovalsPage)
+
+	// Reporting pages (accountant+)
+	r.Get("/reports", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAccountant]), page.ReportsPage)
+	r.Get("/audit", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAccountant]), page.AuditPage)
+
+	// Management pages (admin+)
+	r.Get("/accounts", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), page.AccountsPage)
+	r.Get("/categories", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), page.CategoriesPage)
+	r.Get("/budgets", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), page.BudgetsPage)
+	r.Get("/settings", middleware.RequireAuth(), middleware.RequireRole(auth.RoleLevel[auth.RoleAdmin]), page.SettingsPage)
+
+	// Team page - employee+
+	r.Get("/team", middleware.RequireAuth(), page.TeamPage)
 }

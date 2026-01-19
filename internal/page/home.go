@@ -276,3 +276,22 @@ func VerifyEmailPage(f *fiber.Ctx) error {
 		layouts.Base("Verify Your Email", view.VerifyEmailPage("", email, user.LastEmailSentAt)),
 	)
 }
+
+// AccessDenied handles the access denied page
+func AccessDenied(f *fiber.Ctx) error {
+	user, err := getUser(f)
+	if err != nil {
+		return f.Redirect("/signin")
+	}
+
+	// Read sidebar state from cookie
+	collapsed := false
+	if f.Cookies("sidebar_state") == "false" {
+		collapsed = true
+	}
+
+	return render.HTML(
+		f,
+		layouts.Dashboard("Access Denied", view.AccessDeniedPage(), collapsed, user.Email, user.Role, f.Path()),
+	)
+}
