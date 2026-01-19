@@ -38,6 +38,7 @@ jobs:
         run: |
           go build -ldflags="-s -w" -o ${{ env.APP_NAME }} ./cmd/api/main.go
           chmod +x ${{ env.APP_NAME }}
+          ls -lh ${{ env.APP_NAME }}
 
       - name: Create deployment package
         run: |
@@ -47,7 +48,11 @@ jobs:
           cp deploy/app.service deploy-package/
           cp deploy/deploy.sh deploy-package/
           chmod +x deploy-package/deploy.sh
+          echo "📦 Package contents:"
+          ls -lah deploy-package/
           tar -czf deploy.tar.gz -C deploy-package .
+          echo "📦 Tar contents:"
+          tar -tzf deploy.tar.gz
 
       - name: Copy files to EC2
         env:
