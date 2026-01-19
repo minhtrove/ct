@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	fiberLog "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 	"github.com/minhtranin/ct/internal/db"
 	"github.com/minhtranin/ct/internal/handler"
 	"github.com/minhtranin/ct/internal/logger"
@@ -31,7 +32,8 @@ func main() {
 	uri := os.Getenv("MONGODB_URI")
 	client, err := db.ConnectToMongoDB(uri)
 	if err != nil {
-		logger.Error("Main", "Error connecting to MongoDB: ")
+		logger.Error("Main", "Error connecting to MongoDB", zap.String("error", err.Error()))
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 	defer client.Disconnect(context.Background())
 
