@@ -17,15 +17,11 @@ if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
     sudo systemctl stop ${SERVICE_NAME}
 fi
 
-# Backup old binary
-if [ -f "${APP_DIR}/${APP_NAME}.old" ]; then
-    rm -f ${APP_DIR}/${APP_NAME}.old
-fi
-
-if [ -f "${APP_DIR}/${APP_NAME}" ]; then
-    echo "📦 Backing up old binary..."
-    mv ${APP_DIR}/${APP_NAME} ${APP_DIR}/${APP_NAME}.old
-fi
+# Backup old binary (if ct-finance exists and is NOT from this tar extraction)
+# The tar extraction has already happened, so ct-finance.old is the previous backup
+# We need to rotate: ct-finance.old -> remove, ct-finance -> ct-finance.old
+# But the new ct-finance is already here from tar, so we skip this step
+# The tar already extracted everything we need
 
 # New binary is already in place from tar extraction
 # Just set permissions
