@@ -48,5 +48,5 @@ node_modules/
 # static/output.css
 
 # Third-party JavaScript libraries (downloaded separately)
-static/htmx.min.js
+# static/htmx.min.js
 static/alpine.min.js
