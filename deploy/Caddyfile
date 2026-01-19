@@ -1,0 +1,72 @@
+# Caddyfile for IP-based setup (without domain)
+# Replace YOUR_EC2_IP with your actual EC2 public IP
+
+# Option 1: HTTP only (recommended for testing without domain)
+:80 {
+    # Reverse proxy to your Go application
+    reverse_proxy localhost:3000
+
+    # Enable gzip compression
+    encode gzip
+
+    # Basic security headers (without HSTS since we're on HTTP)
+    header {
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        
+        # Prevent MIME type sniffing
+        X-Content-Type-Options "nosniff"
+        
+        # XSS protection
+        X-XSS-Protection "1; mode=block"
+        
+        # Remove Server header
+        -Server
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 100mb
+            roll_keep 5
+            roll_keep_for 720h
+        }
+        format json
+    }
+
+    # Handle errors gracefully
+    handle_errors {
+        @5xx expression {http.error.status_code} >= 500
+        handle @5xx {
+            respond "Service temporarily unavailable" 503
+        }
+    }
+}
+
+# Alternative Option 2: Use your IP address directly
+# Uncomment this and comment out the :80 block above if you prefer
+# Note: Still HTTP only, HTTPS requires a domain name
+
+# http://YOUR_EC2_IP {
+#     reverse_proxy localhost:3000
+#     encode gzip
+#     
+#     header {
+#         X-Frame-Options "SAMEORIGIN"
+#         X-Content-Type-Options "nosniff"
+#         X-XSS-Protection "1; mode=block"
+#         -Server
+#     }
+#     
+#     log {
+#         output file /var/log/caddy/access.log
+#         format json
+#     }
+# }
+
+# When you get a domain, replace everything above with this:
+# yourdomain.com {
+#     reverse_proxy localhost:3000
+#     encode gzip
+#     # Caddy will automatically handle HTTPS!
+# }

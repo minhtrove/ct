@@ -1,0 +1,130 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.21'
+  APP_NAME: ct-finance
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install templ CLI
+        run: go install github.com/a-h/templ/cmd/templ@latest
+
+      - name: Generate templ files
+        run: templ generate
+
+      - name: Build for ARM64 Linux
+        env:
+          GOOS: linux
+          GOARCH: arm64
+          CGO_ENABLED: 0
+        run: |
+          go build -ldflags="-s -w" -o ${{ env.APP_NAME }} ./cmd/api/main.go
+          chmod +x ${{ env.APP_NAME }}
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy-package
+          cp ${{ env.APP_NAME }} deploy-package/
+          cp -r static deploy-package/ || echo "No static folder"
+          cp deploy/app.service deploy-package/
+          cp deploy/deploy.sh deploy-package/
+          chmod +x deploy-package/deploy.sh
+          tar -czf deploy.tar.gz -C deploy-package .
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Copy files to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "$SSH_PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          
+          # Copy deployment package
+          scp -i private_key.pem -o StrictHostKeyChecking=no \
+            deploy.tar.gz ${EC2_USER}@${EC2_HOST}:/tmp/
+          
+          rm -f private_key.pem
+
+      - name: Deploy on EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          AWS_SES_REGION: ${{ secrets.AWS_SES_REGION }}
+          SES_FROM_EMAIL: ${{ secrets.SES_FROM_EMAIL }}
+          SES_FROM_NAME: ${{ secrets.SES_FROM_NAME }}
+          APP_NAME: ${{ secrets.APP_NAME }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+        run: |
+          echo "$SSH_PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          
+          ssh -i private_key.pem -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
+            # Extract deployment package
+            mkdir -p ~/app
+            cd ~/app
+            tar -xzf /tmp/deploy.tar.gz
+            rm /tmp/deploy.tar.gz
+            
+            # Create .env file
+            cat > .env << 'ENVEOF'
+          MONGODB_URI=${{ secrets.MONGODB_URI }}
+          AWS_REGION=${{ secrets.AWS_SES_REGION }}
+          AWS_SES_REGION=${{ secrets.AWS_SES_REGION }}
+          SES_FROM_EMAIL=${{ secrets.SES_FROM_EMAIL }}
+          SES_FROM_NAME=${{ secrets.SES_FROM_NAME }}
+          APP_NAME=${{ secrets.APP_NAME }}
+          APP_BASE_URL=${{ secrets.APP_BASE_URL }}
+          PORT=3000
+          ENVEOF
+            
+            # Run deployment script
+            chmod +x ./deploy.sh
+            ./deploy.sh
+          EOF
+          
+          rm -f private_key.pem
+
+      - name: Health check
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+        run: |
+          sleep 5
+          curl -f ${APP_BASE_URL}/api/health || exit 1
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+            exit 1
+          fi
