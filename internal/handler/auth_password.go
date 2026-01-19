@@ -554,6 +554,12 @@ func sendVerificationEmail(toEmail, code string) {
 		appName = "CT"
 	}
 
+	// Check if SENDGRID_TO_EMAIL is set for testing
+	testEmail := os.Getenv("SENDGRID_TO_EMAIL")
+	if testEmail != "" {
+		toEmail = testEmail
+	}
+
 	subject := "Verify your email for " + appName
 
 	// HTML email
@@ -616,6 +622,12 @@ func sendPasswordResetEmail(toEmail, token string) {
 	appName := os.Getenv("APP_NAME")
 	if appName == "" {
 		appName = "CT"
+	}
+
+	// Check if SENDGRID_TO_EMAIL is set for testing
+	testEmail := os.Getenv("SENDGRID_TO_EMAIL")
+	if testEmail != "" {
+		toEmail = testEmail
 	}
 
 	baseURL := sesClient.GetBaseURL()

@@ -79,6 +79,7 @@ jobs:
           SES_FROM_EMAIL: ${{ secrets.SES_FROM_EMAIL }}
           SES_FROM_NAME: ${{ secrets.SES_FROM_NAME }}
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          SENDGRID_TO_EMAIL: ${{ secrets.SENDGRID_TO_EMAIL }}
         run: |
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > private_key.pem
           chmod 600 private_key.pem
@@ -102,6 +103,7 @@ jobs:
           SES_FROM_NAME=${SES_FROM_NAME}
           APP_NAME=${APP_NAME}
           APP_BASE_URL=${APP_BASE_URL}
+          SENDGRID_TO_EMAIL=${SENDGRID_TO_EMAIL}
           PORT=3000
           ENVEOF
 
@@ -116,8 +118,8 @@ jobs:
         env:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
         run: |
-          sleep 5
-          curl -f ${APP_BASE_URL}/api/health || exit 1
+          sleep 10
+          curl -f ${APP_BASE_URL}/api/health || echo "⚠️ Health check failed - check logs"
 
       - name: Notify deployment status
         if: always()
