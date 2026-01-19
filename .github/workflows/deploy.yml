@@ -55,13 +55,13 @@ jobs:
           EC2_USER: ${{ secrets.EC2_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          echo "$SSH_PRIVATE_KEY" > private_key.pem
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > private_key.pem
           chmod 600 private_key.pem
-          
+
           # Copy deployment package
           scp -i private_key.pem -o StrictHostKeyChecking=no \
             deploy.tar.gz ${EC2_USER}@${EC2_HOST}:/tmp/
-          
+
           rm -f private_key.pem
 
       - name: Deploy on EC2
@@ -76,9 +76,9 @@ jobs:
           APP_NAME: ${{ secrets.APP_NAME }}
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
         run: |
-          echo "$SSH_PRIVATE_KEY" > private_key.pem
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > private_key.pem
           chmod 600 private_key.pem
-          
+
           ssh -i private_key.pem -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
             # Extract deployment package
             mkdir -p ~/app
