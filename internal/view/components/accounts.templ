@@ -1,0 +1,247 @@
+package view
+
+import (
+	"fmt"
+	"github.com/minhtranin/ct/internal/models"
+	"github.com/minhtranin/ct/internal/view/shared/card"
+	"github.com/minhtranin/ct/internal/view/shared/button"
+	"github.com/minhtranin/ct/internal/view/shared/dialog"
+	"github.com/minhtranin/ct/internal/view/shared/input"
+)
+
+// AccountsData contains data for accounts page
+type AccountsData struct {
+	Accounts     []models.Account
+	TotalBalance float64
+}
+
+templ AccountsPage(data AccountsData) {
+	<div class="p-8">
+		<div class="flex justify-between items-center mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Accounts</h1>
+				<p class="text-gray-600 mt-1">Manage your financial accounts</p>
+			</div>
+			<div class="flex items-center gap-4">
+				<div class="text-right">
+					<p class="text-sm text-gray-600">Total Balance</p>
+					<p class="text-2xl font-bold text-gray-900">{ formatMoney(data.TotalBalance) }</p>
+				</div>
+				@dialog.Trigger(dialog.TriggerProps{For: "new-account-dialog"}) {
+					@button.Button(button.Props{Variant: button.VariantDefault}) {
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+						Add Account
+					}
+				}
+			</div>
+		</div>
+
+		<!-- Accounts Grid -->
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			if len(data.Accounts) == 0 {
+				@card.Card(card.Props{Class: "col-span-full text-center py-12"}) {
+					@card.Content() {
+						<p class="text-gray-500">No accounts found. Add your first account to get started.</p>
+					}
+				}
+			} else {
+				for _, acc := range data.Accounts {
+					@card.Card(card.Props{Class: "hover:shadow-lg transition-shadow"}) {
+						@card.Header() {
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-3">
+									<div class={ "w-10 h-10 rounded-full flex items-center justify-center", getAccountTypeColor(acc.Type) }>
+										@getAccountIcon(acc.Type)
+									</div>
+									<div>
+										<h3 class="font-semibold text-gray-900">{ acc.Name }</h3>
+										<p class="text-xs text-gray-500 capitalize">{ string(acc.Type) }</p>
+									</div>
+								</div>
+								if !acc.IsActive {
+									<span class="text-xs text-red-500 font-medium">Inactive</span>
+								}
+							</div>
+						}
+						@card.Content() {
+							<p class={ "text-2xl font-bold mb-4", getBalanceColor(acc.Balance) }>
+								{ formatMoney(acc.Balance) }
+							</p>
+							<div class="flex justify-between items-center text-sm">
+								<span class="text-gray-600">Currency</span>
+								<span class="font-medium text-gray-900">{ acc.Currency }</span>
+							</div>
+						}
+						@card.Footer() {
+							<div class="flex gap-2 w-full">
+								@dialog.Trigger(dialog.TriggerProps{For: fmt.Sprintf("edit-account-%s", acc.ID.Hex())}) {
+									@button.Button(button.Props{
+										Variant: button.VariantOutline,
+										Size:    button.SizeSm,
+									}) {
+										Edit
+									}
+								}
+								@dialog.Trigger(dialog.TriggerProps{For: fmt.Sprintf("delete-account-%s", acc.ID.Hex())}) {
+									@button.Button(button.Props{
+										Variant: button.VariantGhost,
+										Size:    button.SizeSm,
+									}) {
+										Delete
+									}
+								}
+							</div>
+						}
+					}
+					<!-- Edit Account Dialog -->
+					@dialog.Dialog(dialog.Props{ID: fmt.Sprintf("edit-account-%s", acc.ID.Hex())}) {
+						@dialog.Content(dialog.ContentProps{Class: "max-w-md"}) {
+							@dialog.Header() {
+								@dialog.Title() { Edit Account }
+							}
+							<form action={ templ.SafeURL(fmt.Sprintf("/api/accounts/%s", acc.ID.Hex())) } method="POST" class="space-y-4">
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+									@input.Input(input.Props{
+										Name:  "name",
+										Type:  input.TypeText,
+										Value: acc.Name,
+									})
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+									<select name="type" class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm">
+										<option value="bank" selected?={ acc.Type == "bank" }>Bank Account</option>
+										<option value="cash" selected?={ acc.Type == "cash" }>Cash</option>
+										<option value="credit" selected?={ acc.Type == "credit" }>Credit Card</option>
+										<option value="wallet" selected?={ acc.Type == "wallet" }>Investment</option>
+									</select>
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+									<select name="currency" class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm">
+										<option value="USD" selected?={ acc.Currency == "USD" }>USD</option>
+										<option value="VND" selected?={ acc.Currency == "VND" }>VND</option>
+										<option value="EUR" selected?={ acc.Currency == "EUR" }>EUR</option>
+									</select>
+								</div>
+								@dialog.Footer() {
+									@dialog.Close() {
+										@button.Button(button.Props{Variant: button.VariantOutline}) { Cancel }
+									}
+									@button.Button(button.Props{Type: "submit", Variant: button.VariantDefault}) { Save Changes }
+								}
+							</form>
+						}
+					}
+					<!-- Delete Confirmation Dialog -->
+					@dialog.Dialog(dialog.Props{ID: fmt.Sprintf("delete-account-%s", acc.ID.Hex())}) {
+						@dialog.Content(dialog.ContentProps{Class: "max-w-md"}) {
+							@dialog.Header() {
+								@dialog.Title() { Delete Account }
+								@dialog.Description() {
+									Are you sure you want to delete this account? This action cannot be undone.
+								}
+							}
+							<form action={ templ.SafeURL(fmt.Sprintf("/api/accounts/%s/delete", acc.ID.Hex())) } method="POST">
+								@dialog.Footer() {
+									@dialog.Close() {
+										@button.Button(button.Props{Variant: button.VariantOutline}) { Cancel }
+									}
+									@button.Button(button.Props{Type: "submit", Variant: button.VariantDestructive}) { Delete Account }
+								}
+							</form>
+						}
+					}
+				}
+			}
+		</div>
+	</div>
+
+	<!-- New Account Dialog -->
+	@dialog.Dialog(dialog.Props{ID: "new-account-dialog"}) {
+		@dialog.Content(dialog.ContentProps{Class: "max-w-md"}) {
+			@dialog.Header() {
+				@dialog.Title() { Add New Account }
+				@dialog.Description() { Create a new financial account }
+			}
+			<form action="/api/accounts" method="POST" class="space-y-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+					@input.Input(input.Props{
+						Name:        "name",
+						Type:        input.TypeText,
+						Placeholder: "e.g. Main Bank Account",
+						Attributes:  templ.Attributes{"required": "true"},
+					})
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+					<select name="type" class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm" required>
+						<option value="bank">Bank Account</option>
+						<option value="cash">Cash</option>
+						<option value="credit">Credit Card</option>
+						<option value="wallet">Investment</option>
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+					<select name="currency" class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm" required>
+						<option value="USD">USD</option>
+						<option value="VND">VND</option>
+						<option value="EUR">EUR</option>
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Account Number (Optional)</label>
+					@input.Input(input.Props{
+						Name:        "account_number",
+						Type:        input.TypeText,
+						Placeholder: "Account number",
+					})
+				</div>
+				@dialog.Footer() {
+					@dialog.Close() {
+						@button.Button(button.Props{Variant: button.VariantOutline}) { Cancel }
+					}
+					@button.Button(button.Props{Type: "submit", Variant: button.VariantDefault}) { Create Account }
+				}
+			</form>
+		}
+	}
+}
+
+func getAccountTypeColor(t models.AccountType) string {
+	switch t {
+	case models.AccountTypeBank:
+		return "bg-blue-100"
+	case models.AccountTypeCash:
+		return "bg-green-100"
+	case models.AccountTypeCredit:
+		return "bg-purple-100"
+	case models.AccountTypeWallet:
+		return "bg-yellow-100"
+	default:
+		return "bg-gray-100"
+	}
+}
+
+func getBalanceColor(balance float64) string {
+	if balance < 0 {
+		return "text-red-600"
+	}
+	return "text-gray-900"
+}
+
+templ getAccountIcon(t models.AccountType) {
+	switch t {
+		case models.AccountTypeBank:
+			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-600"><path d="m3 21 1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/></svg>
+		case models.AccountTypeCash:
+			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-600"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+		case models.AccountTypeCredit:
+			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-600"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+		default:
+			<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-600"><circle cx="12" cy="12" r="10"/></svg>
+	}
+}

@@ -3,6 +3,7 @@ package layouts
 import (
 	"strings"
 
+	"github.com/minhtranin/ct/internal/auth"
 	"github.com/minhtranin/ct/internal/view/shared/toast"
 	"github.com/minhtranin/ct/internal/view/shared/sidebar"
 	"github.com/minhtranin/ct/internal/view/shared/dialog"
@@ -14,11 +15,11 @@ import (
 )
 
 // Dashboard is the layout for authenticated pages with sidebar navigation
-templ Dashboard(title string, c templ.Component, collapsed bool, userEmail string) {
+templ Dashboard(title string, c templ.Component, collapsed bool, userEmail string, userRole string, currentPath string) {
 	<!DOCTYPE html>
 	<html>
 		<head>
-			<title>{ title }</title>
+			<title>{ title } | Finance Manager</title>
 			<link rel="stylesheet" href="/static/output.css"/>
 			<script src="/static/htmx.min.js" defer></script>
 			@sidebar.Script()
@@ -29,6 +30,67 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 			@calendar.Script()
 			@checkbox.Script()
 			@chart.Script()
+			<script>
+				// Reinitialize components after HTMX content swaps
+				document.body.addEventListener('htmx:afterSwap', function(evt) {
+					// Trigger chart initialization for new content
+					if (window.tui && window.tui.chart) {
+						window.tui.chart.init && window.tui.chart.init();
+					}
+					// Update active sidebar item
+					highlightActiveSidebar();
+				});
+				
+				// Highlight active sidebar item based on URL
+				function highlightActiveSidebar() {
+					var path = window.location.pathname;
+					var links = document.querySelectorAll('[data-tui-sidebar="menu-button"]');
+					links.forEach(function(link) {
+						var href = link.getAttribute('href') || link.getAttribute('hx-get');
+						// Remove active state
+						link.removeAttribute('data-tui-sidebar-active');
+						link.style.backgroundColor = '';
+						// Add active state if matching
+						if (href && (path === href || (path === '/' && href === '/dashboard'))) {
+							link.setAttribute('data-tui-sidebar-active', 'true');
+							link.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+						}
+					});
+				}
+				// Run on page load
+				document.addEventListener('DOMContentLoaded', function() {
+					highlightActiveSidebar();
+					showToastFromURL();
+				});
+				// Run on browser back/forward
+				window.addEventListener('popstate', highlightActiveSidebar);
+				
+				// Show toast based on URL params
+				function showToastFromURL() {
+					var params = new URLSearchParams(window.location.search);
+					var success = params.get('success');
+					var error = params.get('error');
+					
+					if (success && window.tui && window.tui.toast) {
+						window.tui.toast.show({
+							title: 'Success',
+							description: decodeURIComponent(success.replace(/\+/g, ' ')),
+							variant: 'success'
+						});
+						// Clean URL
+						window.history.replaceState({}, '', window.location.pathname);
+					}
+					if (error && window.tui && window.tui.toast) {
+						window.tui.toast.show({
+							title: 'Error',
+							description: decodeURIComponent(error.replace(/\+/g, ' ')),
+							variant: 'destructive'
+						});
+						// Clean URL
+						window.history.replaceState({}, '', window.location.pathname);
+					}
+				}
+			</script>
 		</head>
 		<body class="bg-gray-50">
 			@sidebar.Layout() {
@@ -51,18 +113,20 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 						}
 					}
 					@sidebar.Content() {
+						// Main Menu Group
 						@sidebar.Group() {
 							@sidebar.GroupLabel(sidebar.GroupLabelProps{
 								Attributes: templ.Attributes{"class": "!text-white/80"},
 							}) {
-								Menu
+								Main
 							}
 							@sidebar.Menu() {
 								@sidebar.MenuItem() {
 									@sidebar.MenuButton(sidebar.MenuButtonProps{
-										Href:    "/dashboard",
-										Tooltip: "Dashboard",
-										Attributes: templ.Attributes{"class": "!text-white hover:!text-white/80"},
+										Href:     "/dashboard",
+										Tooltip:  "Dashboard",
+										IsActive: currentPath == "/dashboard" || currentPath == "/",
+										Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
 									}) {
 										<span class="w-4 h-4 mr-3">
 											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
@@ -70,23 +134,208 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 										<span>Dashboard</span>
 									}
 								}
-								@sidebar.MenuItem() {
-									@sidebar.MenuButton(sidebar.MenuButtonProps{
-										Href:    "/story",
-										Tooltip: "Story",
-										Attributes: templ.Attributes{"class": "!text-white hover:!text-white/80"},
-									}) {
-										<span class="w-4 h-4 mr-3">
-											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1"/><path d="M9 7h0.01"/></svg>
-										</span>
-										<span>Story</span>
+
+								// Transactions (employee+)
+								if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleEmployee] {
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:    "/transactions",
+											Tooltip: "Transactions",
+											IsActive: currentPath == "/transactions",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+											</span>
+											<span>Transactions</span>
+										}
+									}
+								}
+
+								// Approvals (holder+)
+								if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleHolder] {
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:     "/approvals",
+											Tooltip:  "Approvals",
+											IsActive: currentPath == "/approvals",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+											</span>
+											<span>Approvals</span>
+										}
+									}
+								}
+
+								// Reports (accountant+)
+								if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleAccountant] {
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:     "/reports",
+											Tooltip:  "Reports",
+											IsActive: currentPath == "/reports",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+											</span>
+											<span>Reports</span>
+										}
+									}
+								}
+
+								// Audit Log (accountant+)
+								if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleAccountant] {
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:     "/audit",
+											Tooltip:  "Audit Log",
+											IsActive: currentPath == "/audit",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+											</span>
+											<span>Audit Log</span>
+										}
 									}
 								}
 							}
 						}
+
 						@sidebar.Separator(sidebar.SeparatorProps{
 							Attributes: templ.Attributes{"class": "!bg-white/10"},
 						})
+
+						// Management Group (admin+)
+						if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleAdmin] {
+							@sidebar.Group() {
+								@sidebar.GroupLabel(sidebar.GroupLabelProps{
+									Attributes: templ.Attributes{"class": "!text-white/80"},
+								}) {
+									Management
+								}
+								@sidebar.Menu() {
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:     "/accounts",
+											Tooltip:  "Accounts",
+											IsActive: currentPath == "/accounts",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+											</span>
+											<span>Accounts</span>
+										}
+									}
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:     "/categories",
+											Tooltip:  "Categories",
+											IsActive: currentPath == "/categories",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+											</span>
+											<span>Categories</span>
+										}
+									}
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:     "/budgets",
+											Tooltip:  "Budgets",
+											IsActive: currentPath == "/budgets",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></svg>
+											</span>
+											<span>Budgets</span>
+										}
+									}
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:     "/settings",
+											Tooltip:  "Settings",
+											IsActive: currentPath == "/settings",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+											</span>
+											<span>Settings</span>
+										}
+									}
+								}
+							}
+						}
+
+						// Team/Users Group (manager+)
+						if auth.GetRoleLevel(userRole) >= auth.RoleLevel[auth.RoleManager] {
+							@sidebar.Separator(sidebar.SeparatorProps{
+								Attributes: templ.Attributes{"class": "!bg-white/10"},
+							})
+							@sidebar.Group() {
+								@sidebar.GroupLabel(sidebar.GroupLabelProps{
+									Attributes: templ.Attributes{"class": "!text-white/80"},
+								}) {
+									Team
+								}
+								@sidebar.Menu() {
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:    "/team",
+											Tooltip: "Team",
+											IsActive: currentPath == "/team",
+											Class: "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20",
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+											</span>
+											<span>Team</span>
+										}
+									}
+								}
+							}
+						}
+
+						// Developer Tools (developer only)
+						if auth.IsDeveloper(userRole) {
+							@sidebar.Separator(sidebar.SeparatorProps{
+								Attributes: templ.Attributes{"class": "!bg-white/10"},
+							})
+							@sidebar.Group() {
+								@sidebar.GroupLabel(sidebar.GroupLabelProps{
+									Attributes: templ.Attributes{"class": "!text-red-400/80"},
+								}) {
+									Developer
+								}
+								@sidebar.Menu() {
+									@sidebar.MenuItem() {
+										@sidebar.MenuButton(sidebar.MenuButtonProps{
+											Href:    "/story",
+											Tooltip: "Storybook",
+											Attributes: templ.Attributes{"class": "!text-red-400 hover:!text-red-300"},
+										}) {
+											<span class="w-4 h-4 mr-3">
+												<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1"/></svg>
+											</span>
+											<span>Storybook</span>
+										}
+									}
+								}
+							}
+						}
+
+						@sidebar.Separator(sidebar.SeparatorProps{
+							Attributes: templ.Attributes{"class": "!bg-white/10"},
+						})
+
+						// Account Group
 						@sidebar.Group() {
 							@sidebar.GroupLabel(sidebar.GroupLabelProps{
 								Attributes: templ.Attributes{"class": "!text-white/80"},
@@ -98,10 +347,10 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 									@sidebar.MenuButton(sidebar.MenuButtonProps{
 										Href:    "/forgot-password",
 										Tooltip: "Change Password",
-										Attributes: templ.Attributes{"class": "!text-white hover:!text-white/80"},
+										Attributes: templ.Attributes{"class": "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20 data-[tui-sidebar-active=true]:!text-white"},
 									}) {
 										<span class="w-4 h-4 mr-3">
-											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><circle cx="11.5" cy="11.5" r="2.5"/><path d="M20 2v6h6"/><path d="M6.5 12.5a5.5 5.5 0 0 1 7.5 0l4.2 4.2a5.5 5.5 0 0 1 0 7.8l-2.1 2.1a5.5 5.5 0 0 1-7.8 0l-4.2-4.2a5.5 5.5 0 0 1 0-7.8Z"/></svg>
+											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
 										</span>
 										<span>Change Password</span>
 									}
@@ -110,10 +359,10 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 									@sidebar.MenuButton(sidebar.MenuButtonProps{
 										Href:    "/logout",
 										Tooltip: "Logout",
-										Attributes: templ.Attributes{"class": "!text-white hover:!text-white/80"},
+										Attributes: templ.Attributes{"class": "!text-white hover:!bg-white/10 data-[tui-sidebar-active=true]:!bg-white/20 data-[tui-sidebar-active=true]:!text-white"},
 									}) {
 										<span class="w-4 h-4 mr-3">
-											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 17 5-5-5-5"/><line x1="21" x2="9" y1="12" y2="12"/><path d="M16 7h0a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h0"/></svg>
+											<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
 										</span>
 										<span>Logout</span>
 									}
@@ -128,14 +377,17 @@ templ Dashboard(title string, c templ.Component, collapsed bool, userEmail strin
 									<div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
 										{ strings.ToUpper(userEmail[0:1]) }
 									</div>
-									<span class="text-sm text-white/80 truncate">{ userEmail }</span>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium text-white truncate">{ userEmail }</p>
+										<p class="text-xs text-white/60 truncate">{ auth.RoleDisplayName(userRole) }</p>
+									</div>
 								</div>
 							}
 						}
 					}
 				}
 				@sidebar.Inset() {
-					<div class="flex flex-col min-h-screen bg-white">
+					<div id="main-content" class="flex flex-col min-h-screen bg-white">
 						@c
 					</div>
 				}

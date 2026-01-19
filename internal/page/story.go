@@ -33,6 +33,6 @@ func Story(f *fiber.Ctx) error {
 
 	return render.HTML(
 		f,
-		layouts.Dashboard("Story", view.StoryPage(), false, user.Email),
+		layouts.Dashboard("Story", view.StoryPage(), false, user.Email, user.Role, f.Path()),
 	)
 }

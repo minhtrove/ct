@@ -13,6 +13,8 @@ type User struct {
 	Email           string             `json:"email" bson:"email"`
 	PasswordHash    string             `json:"-" bson:"password_hash"`
 	Name            string             `json:"name" bson:"name"`
+	Role            string             `json:"role" bson:"role"`                         // RBAC role
+	CompanyID       primitive.ObjectID `json:"company_id" bson:"company_id"`             // Company association
 	AvatarFileID    primitive.ObjectID `json:"avatar_file_id,omitempty" bson:"avatar_file_id,omitempty"`
 	CreatedAt       time.Time          `json:"created_at" bson:"created_at"`
 	UpdatedAt       time.Time          `json:"updated_at" bson:"updated_at"`
@@ -26,3 +28,4 @@ type User struct {
 	ResetToken      string             `json:"-" bson:"reset_token,omitempty"`
 	ResetExpiresAt  time.Time          `json:"-" bson:"reset_expires_at,omitempty"`
 }
+

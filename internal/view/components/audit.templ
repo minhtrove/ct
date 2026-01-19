@@ -1,0 +1,258 @@
+package view
+
+import (
+	"fmt"
+	"github.com/minhtranin/ct/internal/models"
+	"github.com/minhtranin/ct/internal/view/shared/card"
+	"github.com/minhtranin/ct/internal/view/shared/table"
+	"github.com/minhtranin/ct/internal/view/shared/button"
+	"github.com/minhtranin/ct/internal/view/shared/pagination"
+)
+
+// AuditData contains data for audit log page
+type AuditData struct {
+	Logs         []models.AuditLog
+	CurrentPage  int
+	TotalPages   int
+	TotalCount   int
+	FilterEntity string
+	FilterAction string
+	FilterFrom   string
+	FilterTo     string
+}
+
+templ AuditPage(data AuditData) {
+	<div class="p-8">
+		<div class="flex justify-between items-center mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Audit Log</h1>
+				<p class="text-gray-600 mt-1">Track all changes and activities in the system</p>
+			</div>
+		</div>
+
+		<!-- Filters -->
+		@card.Card(card.Props{Class: "mb-6"}) {
+			@card.Content() {
+				<form action="/audit" method="GET" class="flex flex-wrap gap-4 items-end">
+					<div class="flex-1 min-w-[150px]">
+						<label class="block text-sm font-medium text-gray-700 mb-1">Entity</label>
+						<select name="entity" class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+							<option value="">All Entities</option>
+							<option value="user" selected?={ data.FilterEntity == "user" }>User</option>
+							<option value="account" selected?={ data.FilterEntity == "account" }>Account</option>
+							<option value="transaction" selected?={ data.FilterEntity == "transaction" }>Transaction</option>
+							<option value="category" selected?={ data.FilterEntity == "category" }>Category</option>
+							<option value="budget" selected?={ data.FilterEntity == "budget" }>Budget</option>
+						</select>
+					</div>
+					<div class="flex-1 min-w-[150px]">
+						<label class="block text-sm font-medium text-gray-700 mb-1">Action</label>
+						<select name="action" class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+							<option value="">All Actions</option>
+							<option value="create" selected?={ data.FilterAction == "create" }>Created</option>
+							<option value="update" selected?={ data.FilterAction == "update" }>Updated</option>
+							<option value="delete" selected?={ data.FilterAction == "delete" }>Deleted</option>
+							<option value="approve" selected?={ data.FilterAction == "approve" }>Approved</option>
+							<option value="reject" selected?={ data.FilterAction == "reject" }>Rejected</option>
+						</select>
+					</div>
+					<div class="flex-1 min-w-[150px]">
+						<label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+						<input type="date" name="from" value={ data.FilterFrom } class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+					</div>
+					<div class="flex-1 min-w-[150px]">
+						<label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+						<input type="date" name="to" value={ data.FilterTo } class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+					</div>
+					<div class="flex gap-2">
+						@button.Button(button.Props{Type: "submit", Variant: button.VariantOutline}) {
+							Filter
+						}
+						<a href="/audit">
+							@button.Button(button.Props{Type: "button", Variant: button.VariantGhost}) {
+								Reset
+							}
+						</a>
+					</div>
+				</form>
+			}
+		}
+
+		<!-- Audit Log Table -->
+		@card.Card() {
+			<div class="overflow-x-auto">
+				@table.Table() {
+					@table.Header() {
+						@table.Row() {
+							@table.Head() { Timestamp }
+							@table.Head() { User }
+							@table.Head() { Activity }
+							@table.Head() { IP Address }
+						}
+					}
+					@table.Body() {
+						if len(data.Logs) == 0 {
+							@table.Row() {
+								@table.Cell(table.CellProps{Attributes: templ.Attributes{"colspan": "4"}}) {
+									<div class="text-center py-8 text-gray-500">
+										No audit logs found
+									</div>
+								}
+							}
+						} else {
+							for _, log := range data.Logs {
+								@table.Row() {
+									@table.Cell() {
+										<span class="text-sm text-gray-600">{ log.CreatedAt.Format("Jan 02, 2006 15:04") }</span>
+									}
+									@table.Cell() {
+										<div>
+											<span class="font-medium text-gray-900">{ log.UserName }</span>
+											<span class="block text-xs text-gray-500">{ log.UserEmail }</span>
+										</div>
+									}
+									@table.Cell() {
+										<div class="flex items-center gap-2">
+											@AuditActionBadge(log.Action)
+											<span class="text-sm text-gray-700">
+												{ formatAuditDescription(log) }
+											</span>
+										</div>
+									}
+									@table.Cell() {
+										<span class="text-xs text-gray-500 font-mono">{ log.IPAddress }</span>
+									}
+								}
+							}
+						}
+					}
+				}
+			</div>
+			@card.Footer() {
+				<div class="flex justify-between items-center w-full">
+					<span class="text-sm text-gray-600">
+						Showing { fmt.Sprintf("%d", len(data.Logs)) } of { fmt.Sprintf("%d", data.TotalCount) } entries
+					</span>
+					if data.TotalPages > 1 {
+						@pagination.Pagination() {
+							@pagination.Content() {
+								@pagination.Item() {
+									@pagination.Previous(pagination.PreviousProps{
+										Href:     fmt.Sprintf("/audit?page=%d", data.CurrentPage-1),
+										Disabled: data.CurrentPage <= 1,
+									})
+								}
+								for i := 1; i <= data.TotalPages; i++ {
+									@pagination.Item() {
+										@pagination.Link(pagination.LinkProps{
+											Href:     fmt.Sprintf("/audit?page=%d", i),
+											IsActive: i == data.CurrentPage,
+										}) {
+											{ fmt.Sprintf("%d", i) }
+										}
+									}
+								}
+								@pagination.Item() {
+									@pagination.Next(pagination.NextProps{
+										Href:     fmt.Sprintf("/audit?page=%d", data.CurrentPage+1),
+										Disabled: data.CurrentPage >= data.TotalPages,
+									})
+								}
+							}
+						}
+					}
+				</div>
+			}
+		}
+	</div>
+}
+
+// formatAuditDescription creates a human-readable description
+func formatAuditDescription(log models.AuditLog) string {
+	entityName := ""
+	if name, ok := log.Changes["name"].(string); ok && name != "" {
+		entityName = fmt.Sprintf("\"%s\"", name)
+	}
+	
+	switch log.Action {
+	case models.AuditActionCreate:
+		switch log.Entity {
+		case models.AuditEntityAccount:
+			if entityName != "" {
+				return fmt.Sprintf("created new bank account %s", entityName)
+			}
+			return "created a new bank account"
+		case models.AuditEntityTransaction:
+			if amount, ok := log.Changes["amount"].(float64); ok {
+				txnType, _ := log.Changes["type"].(string)
+				return fmt.Sprintf("created new %s transaction $%.2f", txnType, amount)
+			}
+			return "created a new transaction"
+		case models.AuditEntityCategory:
+			if entityName != "" {
+				return fmt.Sprintf("created new category %s", entityName)
+			}
+			return "created a new category"
+		case models.AuditEntityBudget:
+			if entityName != "" {
+				return fmt.Sprintf("created new budget %s", entityName)
+			}
+			return "created a new budget"
+		default:
+			return fmt.Sprintf("created a new %s", log.Entity)
+		}
+	case models.AuditActionUpdate:
+		return fmt.Sprintf("updated %s", log.Entity)
+	case models.AuditActionDelete:
+		return fmt.Sprintf("deleted %s", log.Entity)
+	case models.AuditActionApprove:
+		if amount, ok := log.Changes["amount"].(float64); ok {
+			return fmt.Sprintf("approved transaction $%.2f", amount)
+		}
+		return "approved a transaction"
+	case models.AuditActionReject:
+		if amount, ok := log.Changes["amount"].(float64); ok {
+			return fmt.Sprintf("rejected transaction $%.2f", amount)
+		}
+		return "rejected a transaction"
+	case models.AuditActionLogin:
+		return "logged in"
+	case models.AuditActionLogout:
+		return "logged out"
+	default:
+		return string(log.Action)
+	}
+}
+
+templ AuditActionBadge(action models.AuditAction) {
+	switch action {
+		case models.AuditActionCreate:
+			<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+				Created
+			</span>
+		case models.AuditActionUpdate:
+			<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+				Updated
+			</span>
+		case models.AuditActionDelete:
+			<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+				Deleted
+			</span>
+		case models.AuditActionApprove:
+			<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+				Approved
+			</span>
+		case models.AuditActionReject:
+			<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+				Rejected
+			</span>
+		case models.AuditActionLogin:
+			<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+				Login
+			</span>
+		case models.AuditActionLogout:
+			<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+				Logout
+			</span>
+	}
+}

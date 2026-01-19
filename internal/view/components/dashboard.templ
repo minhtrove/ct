@@ -1,36 +1,336 @@
 package view
 
-import "github.com/minhtranin/ct/internal/models"
+import (
+	"fmt"
+	"github.com/minhtranin/ct/internal/models"
+	"github.com/minhtranin/ct/internal/view/shared/card"
+	"github.com/minhtranin/ct/internal/view/shared/chart"
+	"github.com/minhtranin/ct/internal/view/shared/button"
+)
 
-templ DashboardPage(title string, user *models.User) {
-	<!-- Main Content -->
+// DashboardData contains data for the dashboard
+type DashboardData struct {
+	User             *models.User
+	TotalBalance     float64
+	MonthIncome      float64
+	MonthExpense     float64
+	PendingCount     int
+	Accounts         []models.Account
+	RecentTxns       []models.Transaction
+	BudgetSummaries  []BudgetSummary
+	MonthlyChartData []MonthlyChartPoint
+}
+
+// MonthlyChartPoint for chart display
+type MonthlyChartPoint struct {
+	Label   string
+	Income  float64
+	Expense float64
+}
+
+// BudgetSummary for dashboard display
+type BudgetSummary struct {
+	Name        string
+	Spent       float64
+	Limit       float64
+	Utilization float64
+	Color       string
+}
+
+templ DashboardPage(data DashboardData) {
 	<div class="p-8">
-		<h1 class="text-3xl font-bold text-gray-900 mb-4">Dashboard</h1>
-		<p class="text-gray-600 mb-8">Welcome to your dashboard, { user.Email }!</p>
-
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-			<div class="bg-gradient-to-br from-[#5D5CFF] to-[#4B5563] rounded-lg p-6 text-white">
-				<h3 class="text-lg font-semibold mb-2">Account Status</h3>
-				<p class="text-3xl font-bold">Active</p>
-				<p class="text-sm opacity-80 mt-2">Member since { user.CreatedAt.Format("Jan 2006") }</p>
-			</div>
-			<div class="bg-white border border-gray-200 rounded-lg p-6">
-				<h3 class="text-lg font-semibold mb-2 text-gray-900">Email</h3>
-				<p class="text-gray-600">{ user.Email }</p>
-				if !user.EmailVerified {
-					<span class="inline-block mt-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
-						Not verified
-					</span>
-				} else {
-					<span class="inline-block mt-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-						Verified
-					</span>
-				}
-			</div>
-			<div class="bg-white border border-gray-200 rounded-lg p-6">
-				<h3 class="text-lg font-semibold mb-2 text-gray-900">Last Login</h3>
-				<p class="text-gray-600">{ user.LastLoginAt.Format("Jan 2, 2006 at 3:04 PM") }</p>
-			</div>
+		<div class="mb-8">
+			<h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+			<p class="text-gray-600 mt-1">Welcome back, { data.User.Name }!</p>
 		</div>
+
+		<!-- Financial Summary Cards -->
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+			<!-- Total Balance -->
+			@card.Card(card.Props{Class: "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"}) {
+				@card.Content() {
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm font-medium text-green-600">Total Balance</p>
+							<p class="text-3xl font-bold text-green-900 mt-2">{ formatMoney(data.TotalBalance) }</p>
+							<p class="text-xs text-green-600 mt-1">Across all accounts</p>
+						</div>
+						<div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-600"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+						</div>
+					</div>
+				}
+			}
+
+			<!-- This Month's Income -->
+			@card.Card(card.Props{Class: "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"}) {
+				@card.Content() {
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm font-medium text-blue-600">Income (This Month)</p>
+							<p class="text-3xl font-bold text-blue-900 mt-2">{ formatMoney(data.MonthIncome) }</p>
+							<p class="text-xs text-blue-600 mt-1">+12% from last month</p>
+						</div>
+						<div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+						</div>
+					</div>
+				}
+			}
+
+			<!-- This Month's Expenses -->
+			@card.Card(card.Props{Class: "bg-gradient-to-br from-red-50 to-pink-50 border-red-200"}) {
+				@card.Content() {
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm font-medium text-red-600">Expenses (This Month)</p>
+							<p class="text-3xl font-bold text-red-900 mt-2">{ formatMoney(data.MonthExpense) }</p>
+							<p class="text-xs text-red-600 mt-1">-5% from last month</p>
+						</div>
+						<div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-600"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+						</div>
+					</div>
+				}
+			}
+
+			<!-- Pending Approvals -->
+			@card.Card(card.Props{Class: "bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200"}) {
+				@card.Content() {
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm font-medium text-yellow-600">Pending Approvals</p>
+							<p class="text-3xl font-bold text-yellow-900 mt-2">{ fmt.Sprintf("%d", data.PendingCount) }</p>
+							<p class="text-xs text-yellow-600 mt-1">Awaiting review</p>
+						</div>
+						<div class="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-600"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+						</div>
+					</div>
+				}
+			}
+		</div>
+
+		<!-- Two Column Layout: Charts & Accounts -->
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+			<!-- Income vs Expense Chart -->
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Income vs Expenses
+					}
+					@card.Description() {
+						Last 6 months overview
+					}
+				}
+				@card.Content() {
+					if len(data.MonthlyChartData) > 0 {
+						@chart.Chart(chart.Props{
+							Variant:     chart.VariantBar,
+							ShowYGrid:   true,
+							ShowXLabels: true,
+							Data: chart.Data{
+								Labels: getChartLabels(data.MonthlyChartData),
+								Datasets: []chart.Dataset{
+									{
+										Label: "Income",
+										Data:  getChartIncomeData(data.MonthlyChartData),
+									},
+									{
+										Label: "Expense",
+										Data:  getChartExpenseData(data.MonthlyChartData),
+									},
+								},
+							},
+						})
+					} else {
+						<div class="text-center py-12 text-gray-500">
+							<p>No transaction data yet</p>
+						</div>
+					}
+				}
+			}
+
+			<!-- Accounts Overview -->
+			@card.Card() {
+				@card.Header() {
+					@card.Title() {
+						Accounts
+					}
+					@card.Description() {
+						Your financial accounts
+					}
+				}
+				@card.Content() {
+					<div class="space-y-4">
+						if len(data.Accounts) == 0 {
+							<div class="text-center py-8 text-gray-500">
+								<p>No accounts yet</p>
+								@button.Button(button.Props{
+									Href:    "/accounts",
+									Variant: button.VariantOutline,
+									Size:    button.SizeSm,
+									Class:   "mt-2",
+								}) {
+									Add Account
+								}
+							</div>
+						} else {
+							for _, acc := range data.Accounts {
+								<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+									<div class="flex items-center gap-3">
+										<div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+											if acc.Type == models.AccountTypeBank {
+												<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-indigo-600"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+											} else if acc.Type == models.AccountTypeCash {
+												<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-600"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+											} else {
+												<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-600"><rect width="20" height="14" x="2" y="5" rx="2"/></svg>
+											}
+										</div>
+										<div>
+											<p class="font-medium text-gray-900">{ acc.Name }</p>
+											<p class="text-xs text-gray-500">{ models.AccountTypeDisplayName(acc.Type) }</p>
+										</div>
+									</div>
+									<div class="text-right">
+										<p class={ "font-semibold", templ.KV("text-green-600", acc.Balance >= 0), templ.KV("text-red-600", acc.Balance < 0) }>
+											{ formatMoney(acc.Balance) }
+										</p>
+										<p class="text-xs text-gray-500">{ acc.Currency }</p>
+									</div>
+								</div>
+							}
+						}
+					</div>
+				}
+				@card.Footer() {
+					<a href="/accounts" class="text-sm text-indigo-600 hover:underline">View all accounts →</a>
+				}
+			}
+		</div>
+
+		<!-- Budget Overview -->
+		@card.Card(card.Props{Class: "mb-8"}) {
+			@card.Header() {
+				@card.Title() {
+					Budget Overview
+				}
+				@card.Description() {
+					Monthly spending limits
+				}
+			}
+			@card.Content() {
+				if len(data.BudgetSummaries) == 0 {
+					<div class="text-center py-8 text-gray-500">
+						<p>No budgets configured</p>
+						@button.Button(button.Props{
+							Href:    "/budgets",
+							Variant: button.VariantOutline,
+							Size:    button.SizeSm,
+							Class:   "mt-2",
+						}) {
+							Set Up Budgets
+						}
+					</div>
+				} else {
+					<div class="space-y-4">
+						for _, b := range data.BudgetSummaries {
+							<div>
+								<div class="flex justify-between text-sm mb-1">
+									<span class="font-medium">{ b.Name }</span>
+									<span class="text-gray-600">{ formatMoney(b.Spent) } / { formatMoney(b.Limit) }</span>
+								</div>
+								<div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+									<div 
+										class={ "h-full rounded-full transition-all", templ.KV("bg-green-500", b.Utilization < 70), templ.KV("bg-yellow-500", b.Utilization >= 70 && b.Utilization < 90), templ.KV("bg-red-500", b.Utilization >= 90) }
+										style={ fmt.Sprintf("width: %.1f%%", minFloat(b.Utilization, 100)) }
+									></div>
+								</div>
+							</div>
+						}
+					</div>
+				}
+			}
+			@card.Footer() {
+				<a href="/budgets" class="text-sm text-indigo-600 hover:underline">Manage budgets →</a>
+			}
+		}
+
+		<!-- Quick Actions -->
+		@card.Card() {
+			@card.Header() {
+				@card.Title() {
+					Quick Actions
+				}
+			}
+			@card.Content() {
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+					<a href="/transactions?action=new&type=income" class="flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-green-400 hover:bg-green-50 transition-colors group">
+						<div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mb-2 group-hover:bg-green-200">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-600"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+						</div>
+						<span class="text-sm font-medium text-gray-700">Money In</span>
+					</a>
+					<a href="/transactions?action=new&type=expense" class="flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-red-400 hover:bg-red-50 transition-colors group">
+						<div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mb-2 group-hover:bg-red-200">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-red-600"><line x1="5" x2="19" y1="12" y2="12"/></svg>
+						</div>
+						<span class="text-sm font-medium text-gray-700">Money Out</span>
+					</a>
+					<a href="/transactions?action=new&type=transfer" class="flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-colors group">
+						<div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-2 group-hover:bg-blue-200">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-600"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+						</div>
+						<span class="text-sm font-medium text-gray-700">Transfer</span>
+					</a>
+					<a href="/reports" class="flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-colors group">
+						<div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mb-2 group-hover:bg-purple-200">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-600"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+						</div>
+						<span class="text-sm font-medium text-gray-700">Reports</span>
+					</a>
+				</div>
+			}
+		}
 	</div>
+}
+
+// Helper functions
+func formatMoney(amount float64) string {
+	if amount >= 0 {
+		return fmt.Sprintf("$%.2f", amount)
+	}
+	return fmt.Sprintf("-$%.2f", -amount)
+}
+
+func minFloat(a, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func getChartLabels(data []MonthlyChartPoint) []string {
+	labels := make([]string, len(data))
+	for i, d := range data {
+		labels[i] = d.Label
+	}
+	return labels
+}
+
+func getChartIncomeData(data []MonthlyChartPoint) []float64 {
+	values := make([]float64, len(data))
+	for i, d := range data {
+		values[i] = d.Income
+	}
+	return values
+}
+
+func getChartExpenseData(data []MonthlyChartPoint) []float64 {
+	values := make([]float64, len(data))
+	for i, d := range data {
+		values[i] = d.Expense
+	}
+	return values
 }

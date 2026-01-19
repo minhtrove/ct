@@ -1,0 +1,211 @@
+package view
+
+import (
+	"fmt"
+	"github.com/minhtranin/ct/internal/models"
+	"github.com/minhtranin/ct/internal/view/shared/card"
+	"github.com/minhtranin/ct/internal/view/shared/button"
+	"github.com/minhtranin/ct/internal/view/shared/input"
+	"github.com/minhtranin/ct/internal/view/shared/dialog"
+)
+
+// BudgetsData contains data for budgets page
+type BudgetsData struct {
+	Budgets    []models.Budget
+	Categories []models.Category
+}
+
+templ BudgetsPage(data BudgetsData) {
+	<div class="p-8">
+		<div class="flex justify-between items-center mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Budgets</h1>
+				<p class="text-gray-600 mt-1">Set spending limits and track your budget</p>
+			</div>
+			@dialog.Trigger(dialog.TriggerProps{For: "new-budget-dialog"}) {
+				@button.Button(button.Props{Variant: button.VariantDefault}) {
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mr-2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+					Add Budget
+				}
+			}
+		</div>
+
+		if len(data.Budgets) == 0 {
+			@card.Card(card.Props{Class: "text-center py-12"}) {
+				@card.Content() {
+					<div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+						<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><path d="M16 11h.01"/></svg>
+					</div>
+					<h3 class="text-lg font-semibold text-gray-900 mb-2">No budgets yet</h3>
+					<p class="text-gray-600 mb-4">Create your first budget to start tracking spending</p>
+					@dialog.Trigger(dialog.TriggerProps{For: "new-budget-dialog"}) {
+						@button.Button(button.Props{Variant: button.VariantDefault}) {
+							Create Your First Budget
+						}
+					}
+				}
+			}
+		} else {
+			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				for _, budget := range data.Budgets {
+					@card.Card(card.Props{Class: "hover:shadow-lg transition-shadow"}) {
+						@card.Header() {
+							<div class="flex justify-between items-start">
+								<div>
+									@card.Title() { { budget.Name } }
+									<p class="text-sm text-gray-500">{ budget.CategoryName }</p>
+								</div>
+								<span class={ "px-2 py-1 text-xs rounded-full", templ.KV("bg-green-100 text-green-800", budget.Utilization() < 70), templ.KV("bg-yellow-100 text-yellow-800", budget.Utilization() >= 70 && budget.Utilization() < 90), templ.KV("bg-red-100 text-red-800", budget.Utilization() >= 90) }>
+									{ fmt.Sprintf("%.0f%%", budget.Utilization()) }
+								</span>
+							</div>
+						}
+						@card.Content() {
+							<div class="space-y-4">
+								<div>
+									<div class="flex justify-between text-sm mb-2">
+										<span class="text-gray-600">Spent</span>
+										<span class="font-medium">{ formatMoney(budget.Spent) } / { formatMoney(budget.Amount) }</span>
+									</div>
+									<div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+										<div 
+											class={ "h-full rounded-full transition-all", templ.KV("bg-green-500", budget.Utilization() < 70), templ.KV("bg-yellow-500", budget.Utilization() >= 70 && budget.Utilization() < 90), templ.KV("bg-red-500", budget.Utilization() >= 90) }
+											style={ fmt.Sprintf("width: %.1f%%", minFloat(budget.Utilization(), 100)) }
+										></div>
+									</div>
+								</div>
+								<div class="flex justify-between text-sm">
+									<span class="text-gray-600">Remaining</span>
+									<span class={ "font-semibold", templ.KV("text-green-600", budget.Remaining() > 0), templ.KV("text-red-600", budget.Remaining() <= 0) }>
+										{ formatMoney(budget.Remaining()) }
+									</span>
+								</div>
+								<div class="flex justify-between text-sm text-gray-500">
+									<span>Period</span>
+									<span>{ string(budget.Period) }</span>
+								</div>
+							</div>
+						}
+						@card.Footer() {
+							<div class="flex gap-2 w-full">
+								@dialog.Trigger(dialog.TriggerProps{For: fmt.Sprintf("edit-budget-%s", budget.ID.Hex())}) {
+									@button.Button(button.Props{Variant: button.VariantOutline, Size: button.SizeSm}) { Edit }
+								}
+								@dialog.Trigger(dialog.TriggerProps{For: fmt.Sprintf("delete-budget-%s", budget.ID.Hex())}) {
+									@button.Button(button.Props{Variant: button.VariantGhost, Size: button.SizeSm}) { Delete }
+								}
+							</div>
+						}
+					}
+					<!-- Edit Budget Dialog -->
+					@dialog.Dialog(dialog.Props{ID: fmt.Sprintf("edit-budget-%s", budget.ID.Hex())}) {
+						@dialog.Content(dialog.ContentProps{Class: "max-w-md"}) {
+							@dialog.Header() {
+								@dialog.Title() { Edit Budget }
+							}
+							<form action={ templ.SafeURL(fmt.Sprintf("/api/budgets/%s", budget.ID.Hex())) } method="POST" class="space-y-4">
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1">Budget Name</label>
+									@input.Input(input.Props{
+										Name:  "name",
+										Type:  input.TypeText,
+										Value: budget.Name,
+									})
+								</div>
+								<div>
+									<label class="block text-sm font-medium text-gray-700 mb-1">Budget Amount</label>
+									@input.Input(input.Props{
+										Name:  "amount",
+										Type:  input.TypeNumber,
+										Value: fmt.Sprintf("%.2f", budget.Amount),
+										Attributes: templ.Attributes{"step": "0.01"},
+									})
+								</div>
+								@dialog.Footer() {
+									@dialog.Close() {
+										@button.Button(button.Props{Variant: button.VariantOutline}) { Cancel }
+									}
+									@button.Button(button.Props{Type: "submit", Variant: button.VariantDefault}) { Save Changes }
+								}
+							</form>
+						}
+					}
+					<!-- Delete Budget Dialog -->
+					@dialog.Dialog(dialog.Props{ID: fmt.Sprintf("delete-budget-%s", budget.ID.Hex())}) {
+						@dialog.Content(dialog.ContentProps{Class: "max-w-md"}) {
+							@dialog.Header() {
+								@dialog.Title() { Delete Budget }
+								@dialog.Description() {
+									Are you sure you want to delete this budget? This action cannot be undone.
+								}
+							}
+							<form action={ templ.SafeURL(fmt.Sprintf("/api/budgets/%s/delete", budget.ID.Hex())) } method="POST">
+								@dialog.Footer() {
+									@dialog.Close() {
+										@button.Button(button.Props{Variant: button.VariantOutline}) { Cancel }
+									}
+									@button.Button(button.Props{Type: "submit", Variant: button.VariantDestructive}) { Delete Budget }
+								}
+							</form>
+						}
+					}
+				}
+			</div>
+		}
+	</div>
+
+	<!-- New Budget Dialog -->
+	@dialog.Dialog(dialog.Props{ID: "new-budget-dialog"}) {
+		@dialog.Content(dialog.ContentProps{Class: "max-w-md"}) {
+			@dialog.Header() {
+				@dialog.Title() { Add New Budget }
+				@dialog.Description() { Set a spending limit for a category }
+			}
+			<form action="/api/budgets" method="POST" class="space-y-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Budget Name</label>
+					@input.Input(input.Props{
+						Name:        "name",
+						Type:        input.TypeText,
+						Placeholder: "e.g., Monthly Marketing",
+						Attributes:  templ.Attributes{"required": "true"},
+					})
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+					<select name="category_id" class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm" required>
+						<option value="">Select category</option>
+						for _, cat := range data.Categories {
+							if cat.Type == models.CategoryTypeExpense {
+								<option value={ cat.ID.Hex() }>{ cat.Name }</option>
+							}
+						}
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Budget Amount</label>
+					@input.Input(input.Props{
+						Name:        "amount",
+						Type:        input.TypeNumber,
+						Placeholder: "0.00",
+						Attributes:  templ.Attributes{"step": "0.01", "min": "0.01", "required": "true"},
+					})
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Period</label>
+					<select name="period" class="w-full rounded-md border border-gray-300 py-2 px-3 text-sm" required>
+						<option value="monthly">Monthly</option>
+						<option value="quarterly">Quarterly</option>
+						<option value="yearly">Yearly</option>
+					</select>
+				</div>
+				@dialog.Footer() {
+					@dialog.Close() {
+						@button.Button(button.Props{Variant: button.VariantOutline}) { Cancel }
+					}
+					@button.Button(button.Props{Type: "submit", Variant: button.VariantDefault}) { Create Budget }
+				}
+			</form>
+		}
+	}
+}

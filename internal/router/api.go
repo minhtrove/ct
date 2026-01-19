@@ -6,7 +6,7 @@ import (
 	"github.com/minhtranin/ct/internal/handler"
 )
 
-func registerAPI (app *fiber.App) {
+func registerAPI(app *fiber.App) {
 	api := app.Group("/api")
 	api.Get("/health", handler.Health)
 
@@ -20,5 +20,29 @@ func registerAPI (app *fiber.App) {
 	auth.Post("/reset-password", handler.ResetPassword)
 	auth.Get("/verify-email", handler.VerifyEmail)
 	auth.Get("/logout", handler.Logout)
-}
 
+	// Account routes
+	api.Post("/accounts", handler.CreateAccount)
+	api.Post("/accounts/:id", handler.UpdateAccount) // POST for HTML forms
+	api.Post("/accounts/:id/delete", handler.DeleteAccount)
+
+	// Category routes
+	api.Post("/categories", handler.CreateCategory)
+	api.Post("/categories/:id", handler.UpdateCategory) // POST for HTML forms
+	api.Post("/categories/:id/delete", handler.DeleteCategory)
+
+	// Budget routes
+	api.Post("/budgets", handler.CreateBudget)
+	api.Post("/budgets/:id", handler.UpdateBudget) // POST for HTML forms
+	api.Post("/budgets/:id/delete", handler.DeleteBudget)
+
+	// Transaction routes
+	api.Post("/transactions", handler.CreateTransaction)
+	api.Post("/transactions/:id", handler.UpdateTransaction) // POST for HTML forms
+	api.Post("/transactions/:id/delete", handler.DeleteTransaction)
+	api.Post("/transactions/:id/approve", handler.ApproveTransaction)
+	api.Post("/transactions/:id/reject", handler.RejectTransaction)
+
+	// User management routes
+	api.Post("/users/:id/role", handler.UpdateUserRole)
+}

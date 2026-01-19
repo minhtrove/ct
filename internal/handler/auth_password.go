@@ -161,8 +161,9 @@ func SignUp(c *fiber.Ctx) error {
 		go sendVerificationEmail(email, verifyCode)
 	}
 
-	// Redirect to verify email page
-	return c.Redirect("/verify-email?email=" + email)
+	// Redirect to verify email page using HX-Redirect for HTMX
+	c.Set("HX-Redirect", "/verify-email?email="+email)
+	return c.SendStatus(fiber.StatusOK)
 }
 
 // SignIn handles POST /api/auth/signin
@@ -275,7 +276,7 @@ func VerifyCode(c *fiber.Ctx) error {
 	var user models.User
 	err := usersCollection.FindOne(c.Context(), bson.M{
 		"email":             email,
-		"verify_token":       code,
+		"verify_token":      code,
 		"verify_expires_at": bson.M{"$gt": time.Now()},
 	}).Decode(&user)
 
@@ -464,7 +465,7 @@ func ResetPassword(c *fiber.Ctx) error {
 	// Find user with valid reset token
 	var user models.User
 	err := usersCollection.FindOne(c.Context(), bson.M{
-		"reset_token":       token,
+		"reset_token":      token,
 		"reset_expires_at": bson.M{"$gt": time.Now()},
 	}).Decode(&user)
 
@@ -487,9 +488,9 @@ func ResetPassword(c *fiber.Ctx) error {
 	usersCollection.UpdateOne(c.Context(), bson.M{"_id": user.ID}, bson.M{
 		"$set": bson.M{
 			"password_hash":    hashedPassword,
-			"reset_token":       "",
-			"reset_expires_at":  time.Time{},
-			"updated_at":        time.Now(),
+			"reset_token":      "",
+			"reset_expires_at": time.Time{},
+			"updated_at":       time.Now(),
 		},
 	})
 
@@ -513,7 +514,7 @@ func VerifyEmail(c *fiber.Ctx) error {
 	// Find user with valid verification token
 	var user models.User
 	err := usersCollection.FindOne(c.Context(), bson.M{
-		"verify_token":       token,
+		"verify_token":      token,
 		"verify_expires_at": bson.M{"$gt": time.Now()},
 	}).Decode(&user)
 

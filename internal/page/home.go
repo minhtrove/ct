@@ -9,11 +9,41 @@ import (
 
 	"github.com/minhtranin/ct/internal/handler"
 	"github.com/minhtranin/ct/internal/models"
-	view "github.com/minhtranin/ct/internal/view/components"
 	"github.com/minhtranin/ct/internal/render"
+	view "github.com/minhtranin/ct/internal/view/components"
 	"github.com/minhtranin/ct/internal/view/layouts"
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+// getUser fetches user from session and database, returns user and role
+func getUser(f *fiber.Ctx) (*models.User, error) {
+	userID, err := handler.GetSession(f)
+	if err != nil {
+		return nil, err
+	}
+
+	db := handler.GetDB()
+	usersCollection := db.Database("ct").Collection("users")
+
+	var user models.User
+	objectID, _ := primitive.ObjectIDFromHex(userID)
+	err = usersCollection.FindOne(f.Context(), bson.M{"_id": objectID}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set default role if empty
+	if user.Role == "" {
+		user.Role = "employee"
+	}
+
+	return &user, nil
+}
+
+// isHTMXRequest checks if the request is an HTMX request
+func isHTMXRequest(f *fiber.Ctx) bool {
+	return f.Get("HX-Request") == "true"
+}
 
 func Home(f *fiber.Ctx) error {
 	// Check if user is authenticated
@@ -55,21 +85,115 @@ func SignUp(f *fiber.Ctx) error {
 }
 
 func Dashboard(f *fiber.Ctx) error {
-	// Get user from session
-	userID, err := handler.GetSession(f)
+	user, err := getUser(f)
 	if err != nil {
 		return f.Redirect("/signin")
 	}
 
-	// Fetch user from database
 	db := handler.GetDB()
-	usersCollection := db.Database("ct").Collection("users")
 
-	var user models.User
-	objectID, _ := primitive.ObjectIDFromHex(userID)
-	err = usersCollection.FindOne(f.Context(), bson.M{"_id": objectID}).Decode(&user)
-	if err != nil {
-		return f.Redirect("/signin")
+	// Fetch accounts for the company
+	var accounts []models.Account
+	accountsCursor, _ := db.Database("ct").Collection("accounts").Find(f.Context(), bson.M{
+		"company_id": user.CompanyID,
+		"is_active":  true,
+	})
+	if accountsCursor != nil {
+		accountsCursor.All(f.Context(), &accounts)
+	}
+
+	// Calculate total balance
+	var totalBalance float64
+	for _, acc := range accounts {
+		totalBalance += acc.Balance
+	}
+
+	// Count pending approvals
+	pendingCount, _ := db.Database("ct").Collection("transactions").CountDocuments(f.Context(), bson.M{
+		"company_id": user.CompanyID,
+		"status":     "pending",
+	})
+
+	// Fetch budgets for the company
+	var budgets []models.Budget
+	budgetsCursor, _ := db.Database("ct").Collection("budgets").Find(f.Context(), bson.M{
+		"company_id": user.CompanyID,
+		"is_active":  true,
+	})
+	if budgetsCursor != nil {
+		budgetsCursor.All(f.Context(), &budgets)
+	}
+
+	// Build budget summaries (for now, show budget amount as limit, 0 spent)
+	var budgetSummaries []view.BudgetSummary
+	for _, budget := range budgets {
+		summary := view.BudgetSummary{
+			Name:        budget.Name,
+			Spent:       budget.Spent,
+			Limit:       budget.Amount,
+			Utilization: 0,
+			Color:       "#6366f1", // indigo
+		}
+		if budget.Amount > 0 {
+			summary.Utilization = (budget.Spent / budget.Amount) * 100
+		}
+		budgetSummaries = append(budgetSummaries, summary)
+	}
+
+	// Fetch approved transactions for last 6 months for chart
+	sixMonthsAgo := time.Now().AddDate(0, -6, 0)
+	var transactions []models.Transaction
+	txnCursor, _ := db.Database("ct").Collection("transactions").Find(f.Context(), bson.M{
+		"company_id":       user.CompanyID,
+		"status":           models.TransactionStatusApproved,
+		"transaction_date": bson.M{"$gte": sixMonthsAgo},
+	})
+	if txnCursor != nil {
+		txnCursor.All(f.Context(), &transactions)
+	}
+
+	// Build monthly chart data
+	monthlyData := make(map[string]*view.MonthlyChartPoint)
+	for _, txn := range transactions {
+		monthKey := txn.TransactionDate.Format("Jan 2006")
+		if _, exists := monthlyData[monthKey]; !exists {
+			monthlyData[monthKey] = &view.MonthlyChartPoint{Label: txn.TransactionDate.Format("Jan")}
+		}
+		if txn.Type == models.TransactionTypeIncome {
+			monthlyData[monthKey].Income += txn.Amount
+		} else if txn.Type == models.TransactionTypeExpense {
+			monthlyData[monthKey].Expense += txn.Amount
+		}
+	}
+
+	// Convert map to sorted slice (last 6 months)
+	var monthlyChartData []view.MonthlyChartPoint
+	for i := 5; i >= 0; i-- {
+		month := time.Now().AddDate(0, -i, 0)
+		monthKey := month.Format("Jan 2006")
+		label := month.Format("Jan")
+		if data, exists := monthlyData[monthKey]; exists {
+			monthlyChartData = append(monthlyChartData, *data)
+		} else {
+			monthlyChartData = append(monthlyChartData, view.MonthlyChartPoint{Label: label, Income: 0, Expense: 0})
+		}
+	}
+
+	// Build dashboard data
+	data := view.DashboardData{
+		User:             user,
+		TotalBalance:     totalBalance,
+		MonthIncome:      0, // TODO: Calculate from transactions
+		MonthExpense:     0, // TODO: Calculate from transactions
+		PendingCount:     int(pendingCount),
+		Accounts:         accounts,
+		BudgetSummaries:  budgetSummaries,
+		MonthlyChartData: monthlyChartData,
+	}
+
+	// Check if HTMX request - return only content
+	if isHTMXRequest(f) {
+		return render.HTML(f, view.DashboardPage(data))
 	}
 
 	// Read sidebar state from cookie
@@ -80,7 +204,7 @@ func Dashboard(f *fiber.Ctx) error {
 
 	return render.HTML(
 		f,
-		layouts.Dashboard("Dashboard", view.DashboardPage("", &user), collapsed, user.Email),
+		layouts.Dashboard("Dashboard", view.DashboardPage(data), collapsed, user.Email, user.Role, f.Path()),
 	)
 }
 
