@@ -39,12 +39,21 @@ echo "▶️  Starting ${SERVICE_NAME} service..."
 sudo systemctl start ${SERVICE_NAME}
 
 # Check status
-sleep 2
+sleep 3
 if sudo systemctl is-active --quiet ${SERVICE_NAME}; then
     echo "✅ Deployment successful! Service is running."
     sudo systemctl status ${SERVICE_NAME} --no-pager
 else
-    echo "❌ Service failed to start. Rolling back..."
+    echo "❌ Service failed to start."
+    echo "📋 Service status:"
+    sudo systemctl status ${SERVICE_NAME} --no-pager
+    echo "📋 Service logs:"
+    sudo journalctl -u ${SERVICE_NAME} -n 50 --no-pager
+    echo "📋 .env file contents:"
+    cat "${APP_DIR}/.env"
+    echo "📋 Binary info:"
+    file "${APP_DIR}/${APP_NAME}"
+    echo "❌ Rolling back..."
     if [ -f "${APP_DIR}/${APP_NAME}.old" ]; then
         mv ${APP_DIR}/${APP_NAME}.old ${APP_DIR}/${APP_NAME}
         sudo systemctl start ${SERVICE_NAME}
