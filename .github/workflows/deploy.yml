@@ -30,10 +30,10 @@ jobs:
       - name: Generate templ files
         run: templ generate
 
-      - name: Build for ARM64 Linux
+      - name: Build for Linux
         env:
           GOOS: linux
-          GOARCH: arm64
+          GOARCH: amd64
           CGO_ENABLED: 0
         run: |
           go build -ldflags="-s -w" -o ${{ env.APP_NAME }} ./cmd/api/main.go
@@ -53,9 +53,9 @@ jobs:
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PRIVATE_KEY_BASE64: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > private_key.pem
+          echo "$SSH_PRIVATE_KEY_BASE64" | base64 -d > private_key.pem
           chmod 600 private_key.pem
 
           # Copy deployment package
@@ -79,30 +79,30 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > private_key.pem
           chmod 600 private_key.pem
 
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
+          ssh -i private_key.pem -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << EOF
             # Extract deployment package
             mkdir -p ~/app
             cd ~/app
             tar -xzf /tmp/deploy.tar.gz
             rm /tmp/deploy.tar.gz
-            
+
             # Create .env file
             cat > .env << 'ENVEOF'
-          MONGODB_URI=${{ secrets.MONGODB_URI }}
-          AWS_REGION=${{ secrets.AWS_SES_REGION }}
-          AWS_SES_REGION=${{ secrets.AWS_SES_REGION }}
-          SES_FROM_EMAIL=${{ secrets.SES_FROM_EMAIL }}
-          SES_FROM_NAME=${{ secrets.SES_FROM_NAME }}
-          APP_NAME=${{ secrets.APP_NAME }}
-          APP_BASE_URL=${{ secrets.APP_BASE_URL }}
+          MONGODB_URI=${MONGODB_URI}
+          AWS_REGION=${AWS_SES_REGION}
+          AWS_SES_REGION=${AWS_SES_REGION}
+          SES_FROM_EMAIL=${SES_FROM_EMAIL}
+          SES_FROM_NAME=${SES_FROM_NAME}
+          APP_NAME=${APP_NAME}
+          APP_BASE_URL=${APP_BASE_URL}
           PORT=3000
           ENVEOF
-            
+
             # Run deployment script
             chmod +x ./deploy.sh
             ./deploy.sh
           EOF
-          
+
           rm -f private_key.pem
 
       - name: Health check
