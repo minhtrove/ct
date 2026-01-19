@@ -88,11 +88,14 @@ jobs:
             # Extract deployment package
             mkdir -p ~/app
             cd ~/app
+            echo "📦 Extracting tar file..."
             tar -xzf /tmp/deploy.tar.gz
+            echo "📦 Contents after extraction:"
+            ls -lah
             rm /tmp/deploy.tar.gz
 
             # Create .env file
-            cat > .env << 'ENVEOF'
+            cat > .env << ENVEOF
           MONGODB_URI=${MONGODB_URI}
           AWS_REGION=${AWS_SES_REGION}
           AWS_SES_REGION=${AWS_SES_REGION}
