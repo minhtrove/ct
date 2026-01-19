@@ -33,7 +33,7 @@ jobs:
       - name: Build for Linux
         env:
           GOOS: linux
-          GOARCH: amd64
+          GOARCH: arm64
           CGO_ENABLED: 0
         run: |
           go build -ldflags="-s -w" -o ${{ env.APP_NAME }} ./cmd/api/main.go
